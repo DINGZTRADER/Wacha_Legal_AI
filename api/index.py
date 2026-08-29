@@ -134,8 +134,8 @@ def serve_ui():
       </footer>
 
       <script>
-        let mode = 'citizen';
-        const citizenDepts = [
+        var mode = 'citizen';
+        var citizenDepts = [
           { icon: 'fa-house-chimney', color: 'emerald', title: '1. Land, Plots & Renting', desc: 'Land purchase safety check, tenancy contracts, and boundary dispute guide.', mod: 'land' },
           { icon: 'fa-briefcase', color: 'blue', title: '2. Business & Contracts', desc: 'URSB registration wizard, supplier agreements, and loan contract scanners.', mod: 'biz' },
           { icon: 'fa-gavel', color: 'amber', title: '3. Money Disputes & Court', desc: '7-Day formal demand letters and Small Claims Court assistant (< UGX 10M).', mod: 'debt' },
@@ -145,7 +145,7 @@ def serve_ui():
           { icon: 'fa-trademark', color: 'orange', title: '7. Brand, Logo & Creative', desc: 'URSB brand name search, copyright protection, and cease-and-desist letters.', mod: 'ip' }
         ];
 
-        const advocateDepts = [
+        var advocateDepts = [
           { icon: 'fa-house-chimney', color: 'emerald', title: '1. Conveyancing & Titles', desc: 'NLIS title search encumbrance auditor, caveat lapse briefs, and RTA transfer instruments.', mod: 'adv_land' },
           { icon: 'fa-briefcase', color: 'blue', title: '2. Banking, SIMPO & M&A', desc: 'SIMPO security perfection notices, debentures, and Companies Act 2012 filings.', mod: 'adv_biz' },
           { icon: 'fa-gavel', color: 'amber', title: '3. Litigation & ECCMIS', desc: 'ECCMIS Plaints, WSDs, and chamber summons citing Civil Procedure Rules (SI 71-1).', mod: 'adv_lit' },
@@ -156,29 +156,34 @@ def serve_ui():
         ];
 
         function render() {
-          const list = mode === 'citizen' ? citizenDepts : advocateDepts;
-          const grid = document.getElementById('deptGrid');
-          grid.innerHTML = list.map(d => `
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
-              <div class="w-10 h-10 rounded-xl bg-slate-100 text-\${d.color}-600 flex items-center justify-center text-lg mb-4">
-                <i class="fa-solid \${d.icon}"></i>
-              </div>
-              <h3 class="font-bold text-slate-900 text-base mb-1">\${d.title}</h3>
-              <p class="text-xs text-slate-500 mb-4 leading-relaxed">\${d.desc}</p>
-              <button onclick="runModule('\${d.mod}')" class="w-full py-2 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 text-xs font-bold rounded-xl transition">
-                Open Department
-              </button>
-            </div>
-          `).join('');
+          var list = mode === 'citizen' ? citizenDepts : advocateDepts;
+          var grid = document.getElementById('deptGrid');
+          var html = '';
+          for (var i = 0; i < list.length; i++) {
+            var d = list[i];
+            html += '<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between">';
+            html += '  <div>';
+            html += '    <div class="w-10 h-10 rounded-xl bg-slate-100 text-' + d.color + '-600 flex items-center justify-center text-lg mb-4">';
+            html += '      <i class="fa-solid ' + d.icon + '"></i>';
+            html += '    </div>';
+            html += '    <h3 class="font-bold text-slate-900 text-base mb-1">' + d.title + '</h3>';
+            html += '    <p class="text-xs text-slate-500 mb-4 leading-relaxed">' + d.desc + '</p>';
+            html += '  </div>';
+            html += '  <button onclick="runModule(\\'' + d.mod + '\\')" class="w-full py-2.5 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 text-xs font-bold rounded-xl transition">';
+            html += '    Open Department';
+            html += '  </button>';
+            html += '</div>';
+          }
+          grid.innerHTML = html;
         }
 
         function setMode(m) {
           mode = m;
-          const btnC = document.getElementById('btnCit');
-          const btnA = document.getElementById('btnAdv');
-          const hero = document.getElementById('heroBox');
-          const h1 = document.getElementById('heroH1');
-          const p = document.getElementById('heroP');
+          var btnC = document.getElementById('btnCit');
+          var btnA = document.getElementById('btnAdv');
+          var hero = document.getElementById('heroBox');
+          var h1 = document.getElementById('heroH1');
+          var p = document.getElementById('heroP');
 
           if (m === 'citizen') {
             btnC.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-white text-blue-700 shadow-sm transition';
