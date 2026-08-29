@@ -63,7 +63,6 @@ def serve_ui():
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         
-        /* Smooth Interactive Hover Lift & Colored Glow Effects */
         .dept-card {
           transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
           transform: translateY(0);
@@ -107,6 +106,13 @@ def serve_ui():
           box-shadow: 0 20px 30px -10px rgba(249, 115, 22, 0.35);
           background: linear-gradient(to bottom, #09131f, #2d1405);
         }
+
+        .quick-pill {
+          transition: all 0.25s ease-in-out;
+        }
+        .quick-pill:hover {
+          transform: translateY(-3px);
+        }
       </style>
     </head>
     <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col selection:bg-blue-500 selection:text-white">
@@ -146,29 +152,49 @@ def serve_ui():
       <!-- MAIN CONTENT -->
       <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         
-        <!-- Hero Card with Circuit Glow Accent -->
+        <!-- HERO CARD WITH 5 MOST COMMON UGANDAN LEGAL ISSUES -->
         <div id="heroBox" class="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-950 rounded-3xl p-6 sm:p-8 border border-blue-500/30 shadow-2xl mb-10 relative overflow-hidden">
-          <div class="relative z-10 max-w-2xl">
+          <div class="relative z-10 max-w-4xl">
             <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-3">
               <i class="fa-solid fa-bolt-lightning text-cyan-400"></i>
-              <span>Powered by Wacha AI Ugandan Law Engine</span>
+              <span>Uganda's 5 Most Common Everyday Legal Issues</span>
             </div>
-            <h1 id="heroH1" class="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">What would you like to get done today?</h1>
-            <p id="heroP" class="text-slate-300 text-sm mb-6 leading-relaxed">Choose a department below. No complex legal terms needed—follow simple button steps to audit land safety, generate binding agreements, or resolve disputes.</p>
+            <h1 id="heroH1" class="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">What legal issue are you facing today?</h1>
+            <p id="heroP" class="text-slate-300 text-sm mb-6 leading-relaxed">Select one of Uganda's top 5 legal scenarios below for instant, step-by-step guidance and document generation in plain English & Luganda:</p>
             
+            <!-- 5 MOST COMMON LEGAL ISSUES IN UGANDA -->
             <div class="flex flex-wrap gap-2.5">
-              <button onclick="runModule('land')" class="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
-                <i class="fa-solid fa-house-chimney"></i>
-                <span>🏡 Check Land Safety</span>
+              
+              <!-- 1. Land Disputes & Purchase Safety -->
+              <button onclick="runModule('land')" class="quick-pill bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-house-chimney text-emerald-400"></i>
+                <span>1. 🏡 Land Safety & Title Check (Ettaka)</span>
               </button>
-              <button onclick="runModule('debt')" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
-                <i class="fa-solid fa-file-invoice-dollar"></i>
-                <span>💸 Recover Unpaid Debt (7-Day Notice)</span>
+
+              <!-- 2. Debt Recovery & Unpaid Money -->
+              <button onclick="runModule('debt')" class="quick-pill bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-file-invoice-dollar text-amber-400"></i>
+                <span>2. 💸 Recover Unpaid Money (7-Day Notice)</span>
               </button>
-              <button onclick="runModule('biz')" class="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
-                <i class="fa-solid fa-briefcase"></i>
-                <span>💼 Start a Business (URSB)</span>
+
+              <!-- 3. Tenant & Landlord Evictions -->
+              <button onclick="runModule('tenancy')" class="quick-pill bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-key text-cyan-400"></i>
+                <span>3. 🔑 Tenant & Eviction Rights (Abapangisa)</span>
               </button>
+
+              <!-- 4. Employment & Unfair Dismissal -->
+              <button onclick="runModule('labor')" class="quick-pill bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-user-xmark text-purple-400"></i>
+                <span>4. 👥 Unfair Dismissal & Salary (Abakozi)</span>
+              </button>
+
+              <!-- 5. Succession, Wills & Family Property -->
+              <button onclick="runModule('will')" class="quick-pill bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                <i class="fa-solid fa-scroll text-rose-400"></i>
+                <span>5. 📜 Make a Will & Estate (Ewalaama)</span>
+              </button>
+
             </div>
           </div>
           <div class="absolute -right-10 -bottom-10 opacity-10 text-white text-9xl pointer-events-none">
@@ -414,8 +440,8 @@ def serve_ui():
           if (m === 'citizen') {
             btnC.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-md transition-all';
             btnA.className = 'px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all';
-            h1.textContent = 'What would you like to get done today?';
-            p.textContent = 'Choose a department below. No complex legal terms needed—follow simple button steps to audit land safety, generate binding agreements, or resolve disputes.';
+            h1.textContent = 'What legal issue are you facing today?';
+            p.textContent = 'Select one of Uganda\\'s top 5 legal scenarios below for instant, step-by-step guidance and document generation in plain English & Luganda:';
           } else {
             btnA.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 font-extrabold shadow-md transition-all';
             btnC.className = 'px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all';
@@ -426,10 +452,16 @@ def serve_ui():
         }
 
         function runModule(name) {
-          if (name.includes('land')) {
-            alert('🏡 LAND SAFETY WIZARD:\\n\\n1. Tenure Check: Mailo / Freehold / Kibanja\\n2. Spousal Consent: Section 39 Land Act verified.\\n3. LC1 Boundary Verification: Certified.');
-          } else if (name.includes('debt')) {
-            alert('💸 7-DAY DEMAND NOTICE GENERATOR:\\n\\nGenerated formal debt recovery notice under the Judicature Small Claims Procedure Rules (Claims <= UGX 10M).');
+          if (name === 'land') {
+            alert('🏡 1. LAND SAFETY WIZARD (ETTAKA):\\n\\n• Step 1: Tenure Check (Mailo vs Freehold vs Kibanja)\\n• Step 2: Spousal Consent Verification (Section 39 Land Act)\\n• Step 3: LC1 & Neighbor Boundary Confirmation\\n• Output: Uganda Land Sale Agreement + Spousal Declaration');
+          } else if (name === 'debt') {
+            alert('💸 2. DEBT RECOVERY ASSISTANT (AMABANJA):\\n\\n• Step 1: Enter Debt Amount (Claims <= UGX 10M)\\n• Step 2: Set 7-Day Payment Deadline\\n• Output: Formal 7-Day Demand Notice + Small Claims Court Filing Guide');
+          } else if (name === 'tenancy') {
+            alert('🔑 3. TENANT & LANDLORD EVICTION RIGHTS (ABAPANGISA):\\n\\n• Under Landlord and Tenant Act 2022\\n• Step 1: Verify Notice Period (Minimum 30 to 90 Days)\\n• Step 2: Rent Increment Caps & Deposit Rights\\n• Output: Lawful Tenancy Agreement / Unlawful Eviction Warning');
+          } else if (name === 'labor') {
+            alert('👥 4. UNFAIR DISMISSAL & UNPAID SALARY (ABAKOZI):\\n\\n• Under Section 66 Employment Act 2006\\n• Step 1: Check Fair Hearing Compliance (48-hr response right)\\n• Step 2: Calculate Notice Pay, Leave & NSSF\\n• Output: Notice to Show Cause / Severance Calculation Sheet');
+          } else if (name === 'will') {
+            alert('📜 5. STATUTORY WILL & FAMILY PROPERTY (EWALAAMA):\\n\\n• Under Succession (Amendment) Act 2022\\n• Step 1: Appoint Joint Executors\\n• Step 2: Protect Surviving Spouse Residential Rights (Sec 27)\\n• Output: Valid Ugandan Will + Letters of Administration Checklist');
           } else {
             alert('⚖️ Module ' + name + ' is active and connected to Ugandan statutory database.');
           }
