@@ -9,10 +9,20 @@ const repo = new LocalMatterRepository();
 
 export default function NewMatter() {
   const [departmentId, setDepartmentId] = useState<DepartmentId>("land-tenancy");
-  const [summary, setSummary] = useState("");
+  const [summary, setSummary] = useState(() => {
+    try {
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        return window.localStorage.getItem("wacha_concierge_narrative") || "";
+      }
+    } catch {
+      // Ignore storage error
+    }
+    return "";
+  });
   const [error, setError] = useState<string | null>(null);
   const [savedMatter, setSavedMatter] = useState<Matter | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +54,13 @@ export default function NewMatter() {
         <p className="lead">
           Save your intake securely to create an immutable matter snapshot for reference or advocate referral.
         </p>
+
+        {summary && (
+          <div className="notice" style={{ marginBottom: "1rem" }}>
+            <small><strong>Note:</strong> We auto-filled your summary from what you told the Wacha Concierge. You can edit it below if needed.</small>
+          </div>
+        )}
+
 
         {savedMatter ? (
           <div className="result standard" role="status">
