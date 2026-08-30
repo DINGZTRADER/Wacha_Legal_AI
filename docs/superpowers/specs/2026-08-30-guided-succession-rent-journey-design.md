@@ -80,6 +80,7 @@ The question engine is deterministic and versioned. AI may extract facts and exp
 - Minors, vulnerable beneficiaries, contested authority, disputed wills, threatened transfers, material unexplained losses, suspected forgery, violence, or criminal exposure require human review.
 - A local leader or LC1 may assist with local facts, identity, mobilisation, or a suitable family process, but is not represented as determining title or succession rights.
 - Family resolution is offered only where safe and does not prevent preservation or urgent escalation.
+- A document-authenticity concern activates verification questions and prevents the affected document from being treated as confirmed evidence until the concern is resolved or reviewed.
 
 ## Outputs
 
@@ -132,6 +133,27 @@ If storage is unavailable, full, evicted, or corrupted, Wacha preserves the acti
 - Users can view what will be shared before any handover or export.
 - Deleting a device-only case removes its case records and derived local data, then confirms what was deleted and notes any exported copies the app cannot remove.
 
+## Suspicious and potentially false documents
+
+Every uploaded document begins as `unverified`. Wacha records the source and original bytes, creates a content digest, and keeps any OCR text, annotations, thumbnails, or AI analysis as separate derived records.
+
+The screening process may identify mismatched names or dates, contradictory reference numbers, unexplained page substitution, inconsistent totals, duplicate documents with different content, missing pages, suspicious metadata, visible editing artefacts, or conflict with other confirmed evidence. It may also ask how the user obtained the document and whether an issuing office, advocate, court, land registry, bank, tenant, or other appropriate source can verify it.
+
+Automated screening never proves that a document is fake. The allowed statuses are `unverified`, `screening concern`, `verification required`, `source-confirmed`, and `rejected by an authoritative source or human reviewer`. Wacha states the specific reason for concern in neutral language and does not accuse the uploader or another person of forgery or fraud.
+
+A `document authenticity concern` flag is added to the case when screening finds a material inconsistency or the user reports that a document may be false. The flag:
+
+- remains attached to the saved case and appears when the user resumes it;
+- identifies the affected document, reason, evidence, date, and current resolution status;
+- blocks automatic reliance on disputed fields in calculations, letters, or legal conclusions;
+- creates a verification task and, where material, an advocate or appropriate-authority review task;
+- is updated through an audit event rather than silently removed; and
+- stays only within that case unless the user explicitly shares or exports it.
+
+Device-only cases retain this flag only in the encrypted local case and its user-created exports. Wacha must not create a hidden cross-case blacklist, reputation score, or allegation about a person based on an unverified document concern.
+
+Uploads are also treated as untrusted computer files. The implementation validates actual file type and size, blocks executable or active content, uses isolated parsers, prevents macros or embedded scripts from running, and fails closed when a file cannot be inspected safely.
+
 ## Accessibility and low-data operation
 
 The journey is mobile-first, keyboard accessible, screen-reader labelled, and usable at high zoom. Questions use short sentences and familiar terms, with explanations on demand. Large tap targets, text alternatives, and non-colour status cues are required.
@@ -142,7 +164,7 @@ Core deterministic questioning, editing, local saving, and viewing already gener
 
 Use a versioned state machine for the journey. Each node declares its question, accepted answer shape, visibility condition, explanation, validation, fact mutations, risk flags, and next-node rules. Domain state is independent from React component state so it can be tested without a browser.
 
-Core records include case, person, deceased person, authority record, property, tenancy, rent period, transaction, expense, statement, evidence item, allegation, confirmed fact, risk flag, referral, document, action, and timeline event. Each record carries provenance and confirmation status.
+Core records include case, person, deceased person, authority record, property, tenancy, rent period, transaction, expense, statement, evidence item, document verification, allegation, confirmed fact, risk flag, referral, document, action, and timeline event. Each record carries provenance and confirmation status.
 
 The AI boundary accepts a minimal typed context and returns schema-validated proposals for narrative extraction, follow-up suggestions, or plain-language text. Deterministic code validates all proposals and owns routing. Invalid, unavailable, or low-confidence AI output falls back to the questionnaire without losing progress.
 
@@ -156,6 +178,9 @@ Local persistence uses a versioned repository interface so IndexedDB and later a
 - Safety, Community Liaison Officer, Administrator General, vulnerable-beneficiary, and advocate-review branches activate only from defined facts.
 - A sibling's written rent statement remains unchanged, is indexed as evidence, and has user-confirmed extracted figures.
 - The rent ledger distinguishes known, reported, estimated, and missing values and never labels a discrepancy as fraud automatically.
+- Every uploaded document starts unverified; screening concerns persist with the case, identify their reasons, prevent automatic reliance on disputed fields, and can be resolved only through an auditable verification event.
+- The product never labels a document fake or accuses a person of forgery solely from automated screening.
+- Malformed, active-content, disguised, or unsupported uploads cannot execute content or enter the evidence store as safely inspected files.
 - The final pack contains the summary, fact table, rent ledger, evidence index, accounting-request draft, applicable referrals, and next-action plan.
 - Device-only cases survive reload, remain separate from server account data, can be locked, exported, restored, and deleted, and never report an unsuccessful save as successful.
 - Shared-device, AI-processing, export, and deletion explanations are understandable in usability testing.
@@ -166,6 +191,6 @@ Local persistence uses a versioned repository interface so IndexedDB and later a
 
 ## First implementation boundary
 
-The first implementation delivers the guided reference journey, device-only storage, case workspace, rent ledger, evidence metadata, accounting-request draft, conditional referral briefs, action plan, and safe AI boundary using test adapters where credentials or reviewed content are unavailable.
+The first implementation delivers the guided reference journey, device-only storage, case workspace, rent ledger, evidence metadata, document screening flags, accounting-request draft, conditional referral briefs, action plan, and safe AI boundary using test adapters where credentials or reviewed content are unavailable.
 
 It does not automatically contact relatives or tenants, submit a police or Administrator General complaint, file in court, determine beneficiary shares, accept payment, or claim advocate review. Account sync, Luganda, production voice transcription, external messaging, and official electronic filing remain later increments unless separately approved.
