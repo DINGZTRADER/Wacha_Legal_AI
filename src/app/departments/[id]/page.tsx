@@ -21,7 +21,7 @@ const DEPARTMENT_DOC_CONFIGS: Record<
     documentName: "Family & Estate Succession Inventory",
     defaultSubjectPlaceholder: "e.g. Letters of Administration / Estate distribution",
   },
-  "affidavits-declarations": {
+  affidavits: {
     documentName: "Statutory Declaration / Affidavit Summary",
     defaultSubjectPlaceholder: "e.g. Verification of Name / Ownership of Property",
   },
@@ -29,11 +29,12 @@ const DEPARTMENT_DOC_CONFIGS: Record<
     documentName: "Commercial Agreement & Service Terms",
     defaultSubjectPlaceholder: "e.g. UGX 12,000,000 Supply Contract",
   },
-  "vehicles-asset-sales": {
+  "vehicles-assets": {
     documentName: "Vehicle & Asset Sale Agreement Summary",
     defaultSubjectPlaceholder: "e.g. Motor Vehicle Sale (Reg No. UBF 123X)",
   },
 };
+
 
 export default async function DepartmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
