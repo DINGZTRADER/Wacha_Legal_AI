@@ -187,13 +187,60 @@ This document summary is generated for legal information purposes under Ugandan 
           {documentBody}
         </div>
 
-        <div style={{ fontSize: "0.85rem", color: "#4b5563", background: "#eff6ff", padding: "0.75rem", borderRadius: "6px" }}>
+        <div style={{ fontSize: "0.85rem", color: "#4b5563", background: "#eff6ff", padding: "0.75rem", borderRadius: "6px", marginBottom: "1rem" }}>
           <strong>Advocate Review Status:</strong> RECOMMENDED
           <p style={{ margin: "0.25rem 0 0 0" }}>
             Save this summary to your matter draft or forward it to an enrolled advocate for formal legal review.
           </p>
         </div>
+
+        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
+          <button
+            type="button"
+            onClick={() => {
+              const printWindow = window.open("", "_blank");
+              if (printWindow) {
+                printWindow.document.write(`
+                  <html>
+                    <head><title>${documentName}</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 2rem; line-height: 1.6;">
+                      <h2>${documentName}</h2>
+                      <p><em>Department: ${departmentTitle} | Law date: 2026-08-30</em></p>
+                      <hr/>
+                      <pre style="font-family: monospace; white-space: pre-wrap;">${documentBody}</pre>
+                    </body>
+                  </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+              }
+            }}
+            style={{ padding: "0.6rem 1rem", borderRadius: "6px", background: "var(--brand, #2677bd)", color: "#fff", border: 0, fontWeight: "600", cursor: "pointer" }}
+          >
+            📄 Download / Print PDF
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const blob = new Blob([documentBody], { type: "text/plain;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${documentName.toLowerCase().replace(/[^a-z0-9]/g, "-")}.txt`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }}
+            style={{ padding: "0.6rem 1rem", borderRadius: "6px", background: "#374151", color: "#fff", border: 0, fontWeight: "600", cursor: "pointer" }}
+          >
+            📝 Download Document (.txt/.doc)
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
