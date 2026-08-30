@@ -123,6 +123,28 @@ Local storage and AI processing are separate choices. If a feature needs remote 
 
 If storage is unavailable, full, evicted, or corrupted, Wacha preserves the active session where possible, explains the problem plainly, and directs the user to export a backup. Failed saves must never be shown as successful.
 
+## Private Case Mode and visible trust
+
+Privacy must be visible and controllable throughout the journey rather than represented by an unsupported security badge. Every active case displays a persistent status such as `Private on this device`, `Session only`, or `Saved to your Wacha account`. The indicator opens a privacy dashboard showing where the case is stored, whether remote AI is enabled, what information has left the device, when the case was last opened, and what the user has explicitly shared.
+
+Before persistent saving, the user chooses one of three clearly separated modes:
+
+1. `Continue for this session` stores no persistent case.
+2. `Keep privately on this device` uses encrypted local storage and an unrecoverable user passphrase.
+3. `Secure Wacha account` remains unavailable until authenticated cloud storage, access history, processor contracts, and required privacy controls are production-ready.
+
+Local storage and remote AI processing require separate decisions. Before remote processing, Wacha previews the exact categories of information that will be transmitted, the purpose, the processor identity when configured, and the applicable retention statement. The user may remove names or identifying details, approve the minimum disclosure, or continue through the deterministic local questionnaire without remote AI.
+
+Every approved remote processing event creates a privacy receipt containing the case ID, timestamp, purpose, categories disclosed, processor label, retention statement, and user decision. The receipt must not duplicate the sensitive content itself. A failed or cancelled request does not create a receipt claiming that processing succeeded.
+
+Shared-device protection includes automatic locking after five minutes of inactivity, a persistent `Hide now` control, hidden case descriptions in recent-case lists, generic browser titles, and generic notifications. `Hide now` immediately removes sensitive case content from view, clears unlock secrets from component memory, and returns to a neutral Wacha screen. Resuming requires the case passphrase or account authentication.
+
+Before any export or handover, Wacha previews the information and documents to be disclosed. The user may exclude contact details, individual documents, unconfirmed allegations, information about children or vulnerable people, and unrelated family information. Future cloud shares must be time-limited, revocable, and recorded in access history.
+
+The product must not claim to be `100% secure`, `unhackable`, or use unsupported `bank-level security` language. It explains shared-device risk, local passphrase non-recovery, browser-data deletion and eviction, exported-copy limitations, and remote-processing implications in plain language.
+
+Production processing requires a documented privacy governance package: applicable PDPO registration, a published Data Protection Officer contact, a Data Protection Impact Assessment, processor agreements, retention and deletion schedules, data-subject access/correction/export/blocking/erasure procedures, security testing, access control, incident response, and breach notification procedures. Features depending on an incomplete safeguard remain disabled rather than displaying an unearned privacy assurance.
+
 ## Privacy and evidence integrity
 
 - Sensitive previews are concealed by default in recent-case lists.
@@ -184,6 +206,11 @@ Local persistence uses a versioned repository interface so IndexedDB and later a
 - The final pack contains the summary, fact table, rent ledger, evidence index, accounting-request draft, applicable referrals, and next-action plan.
 - Device-only cases survive reload, remain separate from server account data, can be locked, exported, restored, and deleted, and never report an unsuccessful save as successful.
 - Shared-device, AI-processing, export, and deletion explanations are understandable in usability testing.
+- The persistent privacy indicator always reflects the actual storage mode and remote-AI state; it cannot display `Private on this device` after cloud persistence or sharing.
+- Remote AI is off until separately approved, receives only the previewed categories, and creates a content-free privacy receipt after a successful processing event.
+- `Hide now` removes sensitive content and unlock secrets from active memory, and five minutes of inactivity locks a device-only case.
+- Recent-case lists, page titles, browser history, and locked-device notifications contain no case subject, person, allegation, property, or legal-department details.
+- Sharing and export screens preview the disclosure and allow optional sensitive categories and documents to be excluded before confirmation.
 - No sensitive case facts appear in URLs, client analytics, content logs, or error messages.
 - Unit tests cover every deterministic branch, contradictory answers, storage migrations, encryption failures, quota failures, stale outputs, and evidence immutability.
 - Integration tests cover the full reference journey, resume-after-reload, encrypted export/import, deletion, AI failure fallback, and each required referral route.

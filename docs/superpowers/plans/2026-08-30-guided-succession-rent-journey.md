@@ -48,6 +48,10 @@
 - `src/features/guided-case/components/guided-intake.test.tsx` — accessible interaction and route recalculation tests.
 - `src/features/guided-case/components/storage-choice.tsx` — session-only/device-only choice and shared-device disclosure.
 - `src/features/guided-case/components/storage-choice.test.tsx` — explicit-consent and failed-save tests.
+- `src/features/guided-case/components/privacy-indicator.tsx` — truthful storage/AI status and privacy-dashboard entry.
+- `src/features/guided-case/components/privacy-indicator.test.tsx` — storage-mode, disclosure, and forbidden-claim tests.
+- `src/features/guided-case/components/ai-consent.tsx` — remote-processing preview, redaction choice, and privacy receipt.
+- `src/features/guided-case/components/ai-consent.test.tsx` — default-off, minimum-disclosure, cancellation, and receipt tests.
 - `src/features/guided-case/components/case-workspace.tsx` — confirmed facts, ledger, evidence flags, documents, timeline, and next actions.
 - `src/features/guided-case/components/case-workspace.test.tsx` — output, stale-state, and follow-up tests.
 - `src/features/guided-case/components/resume-device-case.tsx` — device-case unlock and resume entry.
@@ -72,7 +76,7 @@
 
 **Interfaces:**
 - Consumes: `DepartmentId` from `src/features/departments/registry.ts`.
-- Produces: `GuidedCase`, `Answer`, `Fact`, `Statement`, `RiskFlag`, `EvidenceItem`, `DocumentVerification`, `TimelineEvent`, `createGuidedCase(story, now, id)`.
+- Produces: `GuidedCase`, `Answer`, `Fact`, `Statement`, `PrivacyReceipt`, `RiskFlag`, `EvidenceItem`, `DocumentVerification`, `TimelineEvent`, `createGuidedCase(story, now, id)`.
 
 - [ ] **Step 1: Write the failing domain invariants test**
 
@@ -135,6 +139,16 @@ export const StatementSchema = z.object({
   evidenceId: z.string().nullable(),
 });
 
+export const PrivacyReceiptSchema = z.object({
+  id: z.string().min(1),
+  purpose: z.string().min(1),
+  categories: z.array(z.string().min(1)).min(1),
+  processorLabel: z.string().min(1),
+  retentionStatement: z.string().min(1),
+  decision: z.literal("approved"),
+  processedAt: z.string().datetime(),
+});
+
 export const RiskFlagSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["immediate-safety", "property-preservation", "vulnerable-beneficiary", "authority-uncertain", "accounting-discrepancy", "document-authenticity"]),
@@ -178,6 +192,9 @@ export const GuidedCaseSchema = z.object({
   updatedAt: z.string().datetime(),
   phase: z.enum(["safety", "records", "authority", "beneficiaries", "property", "accounting", "outcome", "confirmation", "workspace"]),
   originalStory: z.object({ text: z.string().trim().min(10).max(4000), kind: z.literal("user-allegation") }),
+  storageMode: z.enum(["session-only", "device-only", "account"]),
+  remoteAiEnabled: z.boolean(),
+  lastOpenedAt: z.string().datetime(),
   answers: z.record(z.string(), AnswerSchema),
   facts: z.array(FactSchema),
   statements: z.array(StatementSchema),
@@ -185,6 +202,7 @@ export const GuidedCaseSchema = z.object({
   evidence: z.array(EvidenceItemSchema),
   verifications: z.array(DocumentVerificationSchema),
   timeline: z.array(TimelineEventSchema),
+  privacyReceipts: z.array(PrivacyReceiptSchema),
   generatedFromRevision: z.number().int().nonnegative().nullable(),
   revision: z.number().int().nonnegative(),
 });
@@ -193,6 +211,7 @@ export type GuidedCase = z.infer<typeof GuidedCaseSchema>;
 export type Answer = z.infer<typeof AnswerSchema>;
 export type Fact = z.infer<typeof FactSchema>;
 export type Statement = z.infer<typeof StatementSchema>;
+export type PrivacyReceipt = z.infer<typeof PrivacyReceiptSchema>;
 export type RiskFlag = z.infer<typeof RiskFlagSchema>;
 export type EvidenceItem = z.infer<typeof EvidenceItemSchema>;
 export type DocumentVerification = z.infer<typeof DocumentVerificationSchema>;
@@ -206,6 +225,9 @@ export function createGuidedCase(story: string, now: string, id = crypto.randomU
     updatedAt: now,
     phase: "safety",
     originalStory: { text: story, kind: "user-allegation" },
+    storageMode: "session-only",
+    remoteAiEnabled: false,
+    lastOpenedAt: now,
     answers: {},
     facts: [],
     statements: [],
@@ -213,6 +235,7 @@ export function createGuidedCase(story: string, now: string, id = crypto.randomU
     evidence: [],
     verifications: [],
     timeline: [],
+    privacyReceipts: [],
     generatedFromRevision: null,
     revision: 0,
   });
@@ -1070,13 +1093,17 @@ git commit -m "feat: add encrypted device case storage"
 - Create: `src/features/guided-case/components/guided-intake.test.tsx`
 - Create: `src/features/guided-case/components/storage-choice.tsx`
 - Create: `src/features/guided-case/components/storage-choice.test.tsx`
+- Create: `src/features/guided-case/components/privacy-indicator.tsx`
+- Create: `src/features/guided-case/components/privacy-indicator.test.tsx`
+- Create: `src/features/guided-case/components/ai-consent.tsx`
+- Create: `src/features/guided-case/components/ai-consent.test.tsx`
 - Modify: `src/features/concierge/concierge-panel.tsx`
 - Modify: `src/app/matters/new/page.tsx`
 - Modify: `src/app/globals.css`
 
 **Interfaces:**
 - Consumes: journey reducer, narrative boundary, `CaseRepository`, and `buildCasePack`.
-- Produces: `<GuidedIntake repository narrativeExtractor initialCase?>` and `<StorageChoice onSessionOnly onDeviceOnly>`.
+- Produces: `<GuidedIntake repository narrativeExtractor initialCase?>`, `<StorageChoice onSessionOnly onDeviceOnly>`, `<PrivacyIndicator caseState onHide>`, and `<AiConsent disclosure onApprove onLocalOnly>`.
 
 - [ ] **Step 1: Write failing interaction tests**
 
@@ -1129,11 +1156,27 @@ test("shows a failed save as a failure", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Could not save this case on this device");
   expect(screen.queryByText("Saved on this device")).not.toBeInTheDocument();
 });
+
+test("keeps remote AI off until the disclosure is approved", () => {
+  const approve = vi.fn();
+  render(<AiConsent disclosure={{ purpose: "Organise the first explanation", categories: ["Situation description"], processorLabel: "Configured AI processor", retentionStatement: "No application case record will be retained." }} onApprove={approve} onLocalOnly={() => undefined} />);
+  expect(screen.getByText("Remote AI is off")).toBeVisible();
+  expect(approve).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Use AI with this information" }));
+  expect(approve).toHaveBeenCalledWith(expect.objectContaining({ decision: "approved", categories: ["Situation description"] }));
+});
+
+test("shows truthful privacy status without absolute security claims", () => {
+  render(<PrivacyIndicator caseState={{ ...createReferenceCase(), storageMode: "device-only", remoteAiEnabled: false }} onHide={() => undefined} />);
+  expect(screen.getByText("Private on this device")).toBeVisible();
+  expect(screen.getByText("Remote AI is off")).toBeVisible();
+  expect(screen.queryByText(/100% secure|unhackable|bank-level/i)).not.toBeInTheDocument();
+});
 ```
 
 - [ ] **Step 3: Run component tests and verify failure**
 
-Run: `npm.cmd test -- src/features/guided-case/components/guided-intake.test.tsx src/features/guided-case/components/storage-choice.test.tsx`
+Run: `npm.cmd test -- src/features/guided-case/components/guided-intake.test.tsx src/features/guided-case/components/storage-choice.test.tsx src/features/guided-case/components/privacy-indicator.test.tsx src/features/guided-case/components/ai-consent.test.tsx`
 
 Expected: FAIL because the components do not exist.
 
@@ -1160,9 +1203,15 @@ type GuidedIntakeProps = {
 
 `StorageChoice` presents exactly three actions: `Continue for this session`, `Keep this case on this device`, and a disabled `Wacha account storage is not available yet`. Device storage shows the 12-character passphrase requirement, a shared-device warning, the statement that local storage is not a backup, and a separate statement that remote AI processing may transmit the minimum relevant text. It requests `navigator.storage.persist()` only after device storage is chosen and reports the browser's returned status without claiming persistence when false.
 
+`PrivacyIndicator` derives its label exclusively from `caseState.storageMode`: `Session only`, `Private on this device`, or `Saved to your Wacha account`. Its expanded dashboard shows remote-AI state, last-opened time, privacy receipts, exports and shares recorded in the timeline, and lock/export/delete actions. It never infers privacy from branding or configuration that has not completed successfully.
+
+`AiConsent` displays purpose, categories, configured processor label, and retention statement before approval. `Use AI with this information` creates a content-free `PrivacyReceipt` only after the provider succeeds; `Continue without remote AI` uses the deterministic questionnaire. Cancellation and provider failure leave `remoteAiEnabled` false and create no successful-processing receipt. Name-removal edits produce a new preview and require a fresh affirmative action.
+
+Add a five-minute inactivity timer that calls the same `onHide` path as `Hide now`. The path replaces the case view with a neutral Wacha screen, removes the passphrase and decrypted case from React state, and requires a fresh unlock. Do not place unlock secrets in session storage, local storage, URLs, logs, or analytics.
+
 - [ ] **Step 6: Add responsive and non-colour-only styles**
 
-Add `.journey-shell`, `.journey-progress`, `.question-card`, `.choice-grid`, `.understanding-panel`, `.storage-choice`, `.privacy-warning`, `.status-badge`, and `.case-workspace` rules. Status badges include visible text and icons in addition to colour. At `max-width: 580px`, actions stack and every tap target has at least `44px` height. Add `@media print` rules that hide navigation, storage controls, and edit controls while preserving the case-pack sections.
+Add `.journey-shell`, `.journey-progress`, `.question-card`, `.choice-grid`, `.understanding-panel`, `.storage-choice`, `.privacy-warning`, `.privacy-indicator`, `.privacy-dashboard`, `.neutral-lock-screen`, `.status-badge`, and `.case-workspace` rules. Status badges include visible text and icons in addition to colour. The `Hide now` control remains reachable without scrolling while sensitive case content is visible. At `max-width: 580px`, actions stack and every tap target has at least `44px` height. Add `@media print` rules that hide navigation, privacy/storage controls, and edit controls while preserving the deliberately selected case-pack sections.
 
 - [ ] **Step 7: Run component and existing concierge tests**
 
@@ -1262,6 +1311,8 @@ Evidence upload calls `inspectUpload`, saves original bytes through the reposito
 
 After an upload, `Check document details` reveals neutral screening fields labelled `Date the document claims`, `Other dates found`, and `Reference numbers found`, with dates and references entered one per line. Submitting converts the lines into `DocumentScreeningInput`, calls `screenDocument`, and applies the result. `I am concerned this document may not be genuine` creates a `verification-required` result with reason `The user requested independent verification of this document.` without accusing any person.
 
+Every export or referral opens a disclosure preview listing contact details, documents, unconfirmed allegations, child or vulnerable-person information, and unrelated family details as separately selectable categories. Optional categories start excluded. Confirming records the selected categories and destination in the timeline; cancelling sends or exports nothing.
+
 - [ ] **Step 5: Implement follow-up events and stale-pack handling**
 
 Provide forms for `letter-delivered`, `meeting-held`, and `response-received`. Saving adds a timeline event, increments case revision, persists when device storage is active, and marks the existing pack stale. Rebuilding the pack requires a fact-confirmation screen and sets `generatedFromRevision` to the current case revision.
@@ -1358,6 +1409,8 @@ async function completeReferenceJourney(page: import("@playwright/test").Page) {
 Use one browser context so IndexedDB survives reload. Save with a fixed test passphrase, reload, unlock, upload a small generated PDF fixture whose structured details produce conflicting references, assert the persistent neutral concern after another reload, export a backup, delete after typing `DELETE`, and assert the case can no longer be unlocked. Assert that neither the story nor passphrase ever appears in `page.url()`.
 
 Add a low-connectivity test that loads the application, starts the journey, calls `context.setOffline(true)`, answers `safety-now` and `will-known`, and confirms both answers remain visible in `What Wacha understands`. Restore connectivity before the test ends. Add a keyboard test that reaches every control in the current question card with `Tab`, activates `I don't know` with `Enter`, and confirms focus moves to the next question heading.
+
+Add privacy browser tests that verify remote AI is off by default, disclosure approval creates one content-free receipt after a successful provider response, cancellation creates none, `Hide now` removes the story from the DOM and clears the decrypted case, five minutes of simulated inactivity locks the case, recent-case cards and page titles reveal no case topic, and locked-device notification fixtures use only generic wording. Assert that the forbidden phrases `100% secure`, `unhackable`, and `bank-level security` do not appear anywhere in the rendered application.
 
 - [ ] **Step 3: Run the new browser test and verify any remaining failures**
 
