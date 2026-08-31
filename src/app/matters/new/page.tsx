@@ -1,4 +1,119 @@
+"use client";
+import { useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
-import { DEPARTMENTS } from "@/features/departments/registry";
-import { getLandTenancyIssue } from "@/features/departments/land-tenancy-issues";
-export default async function NewMatter({searchParams}:{searchParams:Promise<{department?:string;issue?:string}>}){const query=await searchParams;const issue=getLandTenancyIssue(query.issue);return <AppShell audience="citizen"><section className="detail"><p className="eyebrow">Guided matter · Question 1</p><h1>{issue?.title ?? "Save what happened."}</h1><p className="lead">{issue?.question ?? "Start in your own words. Wacha will ask the next relevant question and keep confirmed facts separate from things that still need checking."}</p><div className="notice"><strong>Uganda-focused guidance</strong><p>We will connect your answers to relevant reviewed Ugandan sources as the journey develops. This is legal information, not a substitute for advice from an enrolled advocate.</p></div><form className="matter-form"><label>Department<select name="department" defaultValue={query.department ?? "land-tenancy"}>{DEPARTMENTS.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label><label>{issue ? "What happened?" : "Summary"}<textarea name="summary" minLength={10} required placeholder={issue?.question ?? "Describe the key facts and important dates."}/></label><button type="submit">Continue with my answers</button></form></section></AppShell>}
+import { DEPARTMENTS, type DepartmentId } from "@/features/departments/registry";
+import { MatterDraftSchema } from "@/features/matters/schema";
+import { LocalMatterRepository, type Matter } from "@/features/matters/store";
+
+const repo = new LocalMatterRepository();
+
+export default function NewMatter() {
+  const [departmentId, setDepartmentId] = useState<DepartmentId>("land-tenancy");
+  const [summary, setSummary] = useState(() => {
+    try {
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
+        return window.localStorage.getItem("wacha_concierge_narrative") || "";
+      }
+    } catch {
+      // Ignore storage error
+    }
+    return "";
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [savedMatter, setSavedMatter] = useState<Matter | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSaving(true);
+
+    const validation = MatterDraftSchema.safeParse({ departmentId, summary });
+    if (!validation.success) {
+      setError(validation.error.issues.map((i) => i.message).join(". "));
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      const matter = await repo.save(validation.data);
+      setSavedMatter(matter);
+    } catch {
+      setError("Failed to save matter. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <AppShell audience="citizen">
+      <section className="detail">
+        <p className="eyebrow">New matter</p>
+        <h1>Save what happened.</h1>
+        <p className="lead">
+          Save your intake securely to create an immutable matter snapshot for reference or advocate referral.
+        </p>
+
+        {summary && (
+          <div className="notice" style={{ marginBottom: "1rem" }}>
+            <small><strong>Note:</strong> We auto-filled your summary from what you told the Wacha Concierge. You can edit it below if needed.</small>
+          </div>
+        )}
+
+
+        {savedMatter ? (
+          <div className="result standard" role="status">
+            <strong>Matter Created Successfully!</strong>
+            <p><strong>ID:</strong> {savedMatter.id}</p>
+            <p><strong>Department:</strong> {savedMatter.departmentId}</p>
+            <p><strong>Summary:</strong> {savedMatter.summary}</p>
+            <p><strong>Created:</strong> {new Date(savedMatter.createdAt).toLocaleString()}</p>
+            <button
+              onClick={() => {
+                setSavedMatter(null);
+                setSummary("");
+              }}
+              className="button-text"
+            >
+              Create another matter
+            </button>
+          </div>
+        ) : (
+          <form className="matter-form" onSubmit={handleSubmit}>
+            {error && <div className="result emergency" role="alert"><p>{error}</p></div>}
+            <label>
+              Department
+              <select
+                name="department"
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value as DepartmentId)}
+              >
+                {DEPARTMENTS.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Summary
+              <textarea
+                name="summary"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                minLength={10}
+                maxLength={2000}
+                required
+                placeholder="Describe the key facts, parties involved, and important dates."
+              />
+            </label>
+            <button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Validate & Save Matter"}
+            </button>
+          </form>
+        )}
+      </section>
+    </AppShell>
+  );
+}
