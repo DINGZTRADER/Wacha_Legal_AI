@@ -17,6 +17,8 @@ import { getIssueModule } from "./modules";
 
 const repo = new LocalMatterRepository();
 const ANSWER_TEXT_LIMIT = 5000;
+const EMPTY_NARRATIVE_COPY =
+  "No initial narrative supplied. Facts will come from your guided answers.";
 const SESSION_SAVE_COPY =
   "Saved for this session. Private device storage arrives in the next release stage.";
 
@@ -27,7 +29,11 @@ type GuidedIntakeProps = {
 };
 
 function createSession(props: GuidedIntakeProps): IntakeSession {
-  return createIntakeSession(props, new Date().toISOString(), crypto.randomUUID());
+  return createIntakeSession(
+    { ...props, originalNarrative: props.originalNarrative.trim() || EMPTY_NARRATIVE_COPY },
+    new Date().toISOString(),
+    crypto.randomUUID(),
+  );
 }
 
 function getDraftValue(
@@ -278,7 +284,9 @@ function GuidedIntakeFlow(
       <section className="intake-summary" aria-label="Selected issue and original narrative">
         <p className="intake-summary-kicker">Selected issue</p>
         <h2>{issue.title}</h2>
-        <p className="intake-summary-copy">{props.originalNarrative}</p>
+        <p className="intake-summary-copy">
+          {props.originalNarrative.trim() || EMPTY_NARRATIVE_COPY}
+        </p>
         <p className="intake-summary-meta">Module version {session.moduleVersion}</p>
       </section>
 
