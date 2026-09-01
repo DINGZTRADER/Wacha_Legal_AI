@@ -18,7 +18,7 @@ import { getIssueModule } from "./modules";
 const repo = new LocalMatterRepository();
 const ANSWER_TEXT_LIMIT = 5000;
 const EMPTY_NARRATIVE_COPY =
-  "No initial narrative supplied. Facts will come from your guided answers.";
+  "We'll build the details together through the guided questions.";
 const SESSION_SAVE_COPY =
   "Saved for this session. Private device storage arrives in the next release stage.";
 

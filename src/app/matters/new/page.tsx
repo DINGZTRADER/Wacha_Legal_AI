@@ -157,8 +157,8 @@ function NewMatterContent() {
           {!originalNarrative ? (
             <section className="detail" style={{ paddingBottom: 0 }}>
               <div className="notice">
-                <strong>No concierge summary was supplied</strong>
-                <p>You chose this issue directly, so Wacha will collect the key facts through the guided questions.</p>
+                <strong>Let&apos;s start with a few simple questions</strong>
+                <p>You chose this issue directly. Wacha will ask a few questions to understand what happened and guide your next steps.</p>
               </div>
             </section>
           ) : null}

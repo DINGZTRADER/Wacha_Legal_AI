@@ -27,3 +27,14 @@ test("renders the shared issue chooser for a department route", () => {
     "/matters/new?department=land-tenancy&issue=rent-tenancy-eviction",
   );
 });
+
+test("welcomes direct issue selection without framing it as a missing summary", () => {
+  currentParams = new URLSearchParams("department=land-tenancy&issue=land-sale-transfer-title");
+  render(<NewMatter />);
+
+  expect(screen.getByText(/let's start with a few simple questions/i)).toBeVisible();
+  expect(
+    screen.getByText(/you chose this issue directly.*ask a few questions to understand what happened/i),
+  ).toBeVisible();
+  expect(screen.queryByText(/no concierge summary was supplied/i)).not.toBeInTheDocument();
+});
