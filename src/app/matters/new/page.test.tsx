@@ -21,7 +21,7 @@ test("renders the shared issue chooser for a department route", () => {
   render(<NewMatter />);
 
   expect(screen.getByRole("heading", { name: /choose the issue that fits best/i })).toBeVisible();
-  expect(screen.getAllByRole("link")).toHaveLength(6);
+  expect(document.querySelectorAll(".issue-card")).toHaveLength(5);
   expect(screen.getByRole("link", { name: /rent, tenancy, or eviction/i })).toHaveAttribute(
     "href",
     "/matters/new?department=land-tenancy&issue=rent-tenancy-eviction",
