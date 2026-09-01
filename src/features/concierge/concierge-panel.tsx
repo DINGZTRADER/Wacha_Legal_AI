@@ -1,11 +1,17 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { routeNarrative } from "./routing";
 import { assessSafety } from "./safety";
+import {
+  getSpeechRecognitionConstructor,
+  transcriptFromSpeechEvent,
+  type SpeechRecognitionLike,
+} from "./voice-input";
 import { DEPARTMENTS, getDepartment } from "../departments/registry";
 
 const STORAGE_KEY = "wacha_concierge_narrative";
+const CONTINUATION_KEY = "wacha_concierge_continuation";
 
 export function ConciergePanel() {
   const [submitted, setSubmitted] = useState(() => {
@@ -21,6 +27,9 @@ export function ConciergePanel() {
 
   const [input, setInput] = useState(submitted);
   const [clarification, setClarification] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<"idle" | "listening" | "stopped" | "unsupported" | "permission-denied" | "error">("idle");
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const fullText = useMemo(() => {
     return clarification ? `${submitted}. Clarification: ${clarification}` : submitted;
@@ -29,6 +38,65 @@ export function ConciergePanel() {
   const result = useMemo(() => (fullText ? routeNarrative(fullText) : null), [fullText]);
   const safety = useMemo(() => (fullText ? assessSafety(fullText) : null), [fullText]);
   const department = result?.departmentId ? getDepartment(result.departmentId) : null;
+  const guidedDepartmentHref = department ? `/matters/new?department=${department.id}` : null;
+
+  const stopVoiceInput = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    recognition.stop();
+  };
+
+  const startVoiceInput = () => {
+    if (isListening) {
+      stopVoiceInput();
+      return;
+    }
+
+    const Recognition = getSpeechRecognitionConstructor();
+    if (!Recognition) {
+      setVoiceStatus("unsupported");
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-UG";
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceStatus("listening");
+    };
+    recognition.onresult = (event) => {
+      const transcript = transcriptFromSpeechEvent(event);
+      if (transcript) setInput(transcript);
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      setVoiceStatus(event.error === "not-allowed" || event.error === "service-not-allowed" ? "permission-denied" : "error");
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      setVoiceStatus((current) => (current === "error" || current === "permission-denied" ? current : "stopped"));
+    };
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setIsListening(false);
+      setVoiceStatus("error");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort?.();
+      recognitionRef.current = null;
+    };
+  }, []);
 
   const handleSubmit = (text: string) => {
     const trimmed = text.trim();
@@ -39,12 +107,18 @@ export function ConciergePanel() {
       if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
         window.localStorage.setItem(STORAGE_KEY, trimmed);
       }
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        window.sessionStorage.setItem(CONTINUATION_KEY, "pending");
+      }
     } catch {
       // Ignore storage error
     }
   };
 
   const handleReset = () => {
+    stopVoiceInput();
+    setIsListening(false);
+    setVoiceStatus("idle");
     setInput("");
     setSubmitted("");
     setClarification("");
@@ -72,7 +146,7 @@ export function ConciergePanel() {
       </div>
 
       <p className="muted" style={{ fontSize: "0.92rem", color: "#6b7280", marginBottom: "1.25rem" }}>
-        Describe your situation, or select a quick topic below. Wacha will analyze safety risks, direct you to the exact department, and prepare your document summaries automatically.
+        Describe your situation, or select a quick topic below. Wacha will analyze safety risks and direct you to the right guided intake path without putting your story in the URL.
       </p>
 
       {/* Quick Topic Starter Chips */}
@@ -133,6 +207,36 @@ export function ConciergePanel() {
             placeholder="e.g. I sold equipment to a company in Jinja, but they failed to pay the agreed installment on August 15..."
             style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid #d1d5db" }}
           />
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.6rem", marginTop: "0.75rem" }}>
+            <button
+              type="button"
+              onClick={startVoiceInput}
+              aria-pressed={isListening}
+              style={{
+                padding: "0.55rem 0.9rem",
+                borderRadius: "999px",
+                background: isListening ? "#fee2e2" : "#eef2ff",
+                color: isListening ? "#b91c1c" : "#3730a3",
+                border: `1px solid ${isListening ? "#fecaca" : "#c7d2fe"}`,
+                cursor: "pointer",
+                fontWeight: "600",
+              }}
+            >
+              {isListening ? "■ Stop listening" : "🎙️ Speak your situation"}
+            </button>
+            <small style={{ color: "#64748b" }}>
+              Microphone access is requested only when you choose Speak. Speech processing depends on your browser; you can edit the words before submitting.
+            </small>
+          </div>
+          {voiceStatus !== "idle" && (
+            <p role="status" aria-live="polite" style={{ margin: "0.6rem 0 0", color: voiceStatus === "permission-denied" || voiceStatus === "error" ? "#b91c1c" : "#475569", fontSize: "0.88rem" }}>
+              {voiceStatus === "listening" && "Listening… speak naturally. You can stop at any time."}
+              {voiceStatus === "stopped" && "Stopped listening. Review the words, then submit when ready."}
+              {voiceStatus === "unsupported" && "Voice input is not available in this browser. Please type your situation below."}
+              {voiceStatus === "permission-denied" && "Microphone permission was denied. Allow microphone access for this site, or type your situation below."}
+              {voiceStatus === "error" && "Voice input could not start. Please type your situation below."}
+            </p>
+          )}
           <div className="form-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.75rem" }}>
             <small style={{ color: "#6b7280" }}>Your story is securely processed under Ugandan privacy laws.</small>
             <button type="submit" style={{ padding: "0.6rem 1.25rem", borderRadius: "6px", background: "#2563eb", color: "#fff", border: 0, fontWeight: "600", cursor: "pointer" }}>
@@ -198,9 +302,9 @@ export function ConciergePanel() {
 
               {/* Direct Next Action Buttons */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "1rem" }}>
-                {department && (
+                {guidedDepartmentHref && department && (
                   <Link
-                    href={`/departments/${department.id}`}
+                    href={guidedDepartmentHref}
                     style={{
                       padding: "0.65rem 1.25rem",
                       borderRadius: "6px",
@@ -214,27 +318,29 @@ export function ConciergePanel() {
                       gap: "0.5rem",
                     }}
                   >
-                    Open {department.title} Tools & Generator →
+                    Choose a {department.title} issue →
                   </Link>
                 )}
 
-                <Link
-                  href="/matters/new"
-                  style={{
-                    padding: "0.65rem 1.25rem",
-                    borderRadius: "6px",
-                    background: "#1e293b",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    fontWeight: "600",
-                    fontSize: "0.9rem",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  Save as Immutable Legal Matter 📁
-                </Link>
+                {department && (
+                  <Link
+                    href={`/departments/${department.id}`}
+                    style={{
+                      padding: "0.65rem 1.25rem",
+                      borderRadius: "6px",
+                      background: "#1e293b",
+                      color: "#ffffff",
+                      textDecoration: "none",
+                      fontWeight: "600",
+                      fontSize: "0.9rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    Review {department.title} tools
+                  </Link>
+                )}
 
                 <Link
                   href="/advocate"
@@ -295,7 +401,7 @@ export function ConciergePanel() {
               {DEPARTMENTS.map((dept) => (
                 <Link
                   key={dept.id}
-                  href={`/departments/${dept.id}`}
+                  href={`/matters/new?department=${dept.id}`}
                   style={{
                     padding: "0.5rem 0.75rem",
                     borderRadius: "6px",

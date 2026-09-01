@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { getDepartment } from "@/features/departments/registry";
+import { getDepartment, type DepartmentId } from "@/features/departments/registry";
 import { LandInquiryBuilder } from "@/features/documents/land-inquiry-builder";
 import { GenericDocumentBuilder } from "@/features/documents/generic-document-builder";
+import { getIntakeModule } from "@/features/intake/modules";
 import { LAND_TENANCY_ISSUES } from "@/features/departments/land-tenancy-issues";
 
 const DEPARTMENT_DOC_CONFIGS: Record<
@@ -36,6 +37,18 @@ const DEPARTMENT_DOC_CONFIGS: Record<
   },
 };
 
+function buildDepartmentIssueCards(departmentId: DepartmentId) {
+  if (departmentId === "land-tenancy") {
+    return LAND_TENANCY_ISSUES;
+  }
+
+  return getIntakeModule(departmentId).issues.map((issue) => ({
+    id: issue.id,
+    title: issue.title,
+    description: `Start the guided intake for ${issue.title.toLowerCase()} and answer one question at a time.`,
+    href: `/matters/new?department=${departmentId}&issue=${issue.id}`,
+  }));
+}
 
 export default async function DepartmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -43,6 +56,7 @@ export default async function DepartmentPage({ params }: { params: Promise<{ id:
   if (!d) notFound();
 
   const docConfig = DEPARTMENT_DOC_CONFIGS[id];
+  const issueCards = buildDepartmentIssueCards(d.id);
 
   return (
     <AppShell audience="citizen">
@@ -58,41 +72,42 @@ export default async function DepartmentPage({ params }: { params: Promise<{ id:
           </p>
         </div>
 
-        {id === "land-tenancy" && (
-          <>
-            <div className="notice">
-              <strong>Choose what is closest to your situation</strong>
-              <p>You do not need to know the legal words. Pick one starting point and Wacha will ask simple follow-up questions.</p>
-            </div>
-            <div className="issue-grid">
-              {LAND_TENANCY_ISSUES.map((issue, index) => (
-                <Link className="issue-card" key={issue.id} href={issue.href}>
-                  <span className="number">{String(index + 1).padStart(2, "0")}</span>
-                  <h2>{issue.title}</h2>
-                  <p>{issue.description}</p>
-                  <span className="issue-action">Start with this →</span>
-                </Link>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div style={{ marginTop: "2rem" }}>
-          <h2>Interactive Document Generator</h2>
-          {id === "land-tenancy" ? (
-            <LandInquiryBuilder />
-          ) : docConfig ? (
-            <GenericDocumentBuilder
-              departmentTitle={d.title}
-              documentName={docConfig.documentName}
-              defaultSubjectPlaceholder={docConfig.defaultSubjectPlaceholder}
-            />
-          ) : (
-            <Link className="button" href="/matters/new">
-              Start a guided matter
-            </Link>
-          )}
+        <div className="notice">
+          <strong>Choose what is closest to your situation</strong>
+          <p>You do not need to know the legal words. Pick one starting point and Wacha will ask simple follow-up questions.</p>
         </div>
+
+        <div className="issue-grid">
+          {issueCards.map((issue, index) => (
+            <Link className="issue-card" key={issue.id} href={issue.href}>
+              <span className="number">{String(index + 1).padStart(2, "0")}</span>
+              <h2>{issue.title}</h2>
+              <p>{issue.description}</p>
+              <span className="issue-action">Open guided intake →</span>
+            </Link>
+          ))}
+        </div>
+
+        <details style={{ marginTop: "2rem" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: "1.1rem" }}>
+            Existing document tools
+          </summary>
+          <div style={{ marginTop: "1rem" }}>
+            {id === "land-tenancy" ? (
+              <LandInquiryBuilder />
+            ) : docConfig ? (
+              <GenericDocumentBuilder
+                departmentTitle={d.title}
+                documentName={docConfig.documentName}
+                defaultSubjectPlaceholder={docConfig.defaultSubjectPlaceholder}
+              />
+            ) : (
+              <Link className="button" href="/matters/new">
+                Start a guided matter
+              </Link>
+            )}
+          </div>
+        </details>
       </section>
     </AppShell>
   );

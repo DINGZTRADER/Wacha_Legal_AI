@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { DEPARTMENTS } from "../departments/registry";
-const ids=DEPARTMENTS.map(d=>d.id) as [string,...string[]];
-export const MatterDraftSchema=z.object({departmentId:z.enum(ids),summary:z.string().trim().min(10).max(2000)});
-export type MatterDraft=z.infer<typeof MatterDraftSchema>;
+import { CaseReviewSchema, DepartmentIdSchema, IdentifierSchema } from "../intake/model";
+
+export const MatterDraftSchema = CaseReviewSchema.extend({
+  departmentId: DepartmentIdSchema,
+  issueId: IdentifierSchema,
+  moduleVersion: IdentifierSchema,
+  originalNarrative: z.string().trim().min(10).max(5000),
+}).strict();
+
+export type MatterDraft = z.infer<typeof MatterDraftSchema>;
