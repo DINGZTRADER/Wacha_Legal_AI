@@ -28,13 +28,12 @@ test("renders the shared issue chooser for a department route", () => {
   );
 });
 
-test("welcomes direct issue selection without framing it as a missing summary", () => {
+test("starts direct issue selection without a redundant concierge notice", () => {
   currentParams = new URLSearchParams("department=land-tenancy&issue=land-sale-transfer-title");
   render(<NewMatter />);
 
-  expect(screen.getByText(/let's start with a few simple questions/i)).toBeVisible();
-  expect(
-    screen.getByText(/you chose this issue directly.*ask a few questions to understand what happened/i),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: /complete your case details/i })).toBeVisible();
+  expect(screen.getByText(/answer one question at a time/i)).toBeVisible();
   expect(screen.queryByText(/no concierge summary was supplied/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/you chose this issue directly/i)).not.toBeInTheDocument();
 });

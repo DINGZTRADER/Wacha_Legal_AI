@@ -154,14 +154,6 @@ function NewMatterContent() {
         </section>
       ) : (
         <>
-          {!originalNarrative ? (
-            <section className="detail" style={{ paddingBottom: 0 }}>
-              <div className="notice">
-                <strong>Let&apos;s start with a few simple questions</strong>
-                <p>You chose this issue directly. Wacha will ask a few questions to understand what happened and guide your next steps.</p>
-              </div>
-            </section>
-          ) : null}
           <GuidedIntake
             departmentId={department.id}
             issueId={issue.id}
