@@ -202,17 +202,19 @@ export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
     }
 
     const submittedValue = parseDraftValue(activeQuestion, draftValue);
-    const nextSession = activeAnswer
+    const answerInput = { questionId: activeQuestion.id, value: submittedValue };
+    const answerChanged = activeAnswer !== undefined && activeAnswer.value !== submittedValue;
+    const nextSession = answerChanged
       ? reviseAnswer(
           session,
           issue,
-          { questionId: activeQuestion.id, value: submittedValue },
+          answerInput,
           new Date().toISOString(),
         )
       : answerQuestion(
           session,
           issue,
-          { questionId: activeQuestion.id, value: submittedValue },
+          answerInput,
           new Date().toISOString(),
         );
     const nextVisibleQuestions = getVisibleQuestions(issue, nextSession.answers);
@@ -229,7 +231,11 @@ export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
       return;
     }
 
-    setDisplayedQuestionId(nextQuestion?.id ?? nextSession.currentQuestionId);
+    setDisplayedQuestionId(
+      nextSession.status === "review-ready"
+        ? null
+        : nextQuestion?.id ?? nextSession.currentQuestionId,
+    );
   }
 
   async function handleSaveCase() {
