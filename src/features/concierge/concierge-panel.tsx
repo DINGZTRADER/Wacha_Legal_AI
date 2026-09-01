@@ -6,6 +6,7 @@ import { assessSafety } from "./safety";
 import { DEPARTMENTS, getDepartment } from "../departments/registry";
 
 const STORAGE_KEY = "wacha_concierge_narrative";
+const CONTINUATION_KEY = "wacha_concierge_continuation";
 
 export function ConciergePanel() {
   const [submitted, setSubmitted] = useState(() => {
@@ -39,6 +40,9 @@ export function ConciergePanel() {
     try {
       if (typeof window !== "undefined" && "localStorage" in window && window.localStorage) {
         window.localStorage.setItem(STORAGE_KEY, trimmed);
+      }
+      if (typeof window !== "undefined" && "sessionStorage" in window && window.sessionStorage) {
+        window.sessionStorage.setItem(CONTINUATION_KEY, "pending");
       }
     } catch {
       // Ignore storage error

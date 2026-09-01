@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { DEPARTMENTS, getDepartment, type DepartmentId } from "@/features/departments/registry";
@@ -9,6 +9,7 @@ import { GuidedIntake } from "@/features/intake/guided-intake";
 import { getIntakeModule, getIssueModule } from "@/features/intake/modules";
 
 const STORAGE_KEY = "wacha_concierge_narrative";
+const CONTINUATION_KEY = "wacha_concierge_continuation";
 
 type IssueCard = {
   id: string;
@@ -33,6 +34,15 @@ function readStoredNarrative(): string {
   return "";
 }
 
+function readConciergeContinuation(): boolean {
+  try {
+    const value = window.sessionStorage.getItem(CONTINUATION_KEY);
+    return value === "pending";
+  } catch {
+    return false;
+  }
+}
+
 function buildIssueCards(departmentId: DepartmentId): IssueCard[] {
   if (departmentId === "land-tenancy") {
     return [...LAND_TENANCY_ISSUES];
@@ -46,9 +56,9 @@ function buildIssueCards(departmentId: DepartmentId): IssueCard[] {
   }));
 }
 
-export default function NewMatter() {
+function NewMatterContent() {
   const searchParams = useSearchParams();
-  const [originalNarrative] = useState(readStoredNarrative);
+  const [originalNarrative, setOriginalNarrative] = useState("");
 
   const rawDepartmentId = searchParams.get("department");
   const rawIssueId = searchParams.get("issue");
@@ -60,6 +70,21 @@ export default function NewMatter() {
     () => (departmentId ? buildIssueCards(departmentId) : []),
     [departmentId],
   );
+
+  useEffect(() => {
+    const continuation = readConciergeContinuation();
+    // Hydrate client-only continuation state after the first render to avoid SSR mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOriginalNarrative(continuation ? readStoredNarrative() : "");
+
+    if (continuation && rawIssueId) {
+      try {
+        window.sessionStorage.removeItem(CONTINUATION_KEY);
+      } catch {
+        // Ignore storage error
+      }
+    }
+  }, [rawIssueId, rawDepartmentId]);
 
   return (
     <AppShell audience="citizen">
@@ -131,5 +156,22 @@ export default function NewMatter() {
         </>
       )}
     </AppShell>
+  );
+}
+
+export default function NewMatter() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell audience="citizen">
+          <section className="detail" aria-live="polite">
+            <p className="eyebrow">Guided intake</p>
+            <h1>Loading your guided pathway…</h1>
+          </section>
+        </AppShell>
+      }
+    >
+      <NewMatterContent />
+    </Suspense>
   );
 }

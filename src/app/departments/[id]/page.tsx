@@ -88,22 +88,26 @@ export default async function DepartmentPage({ params }: { params: Promise<{ id:
           ))}
         </div>
 
-        <div style={{ marginTop: "2rem" }}>
-          <h2>Existing document tools</h2>
-          {id === "land-tenancy" ? (
-            <LandInquiryBuilder />
-          ) : docConfig ? (
-            <GenericDocumentBuilder
-              departmentTitle={d.title}
-              documentName={docConfig.documentName}
-              defaultSubjectPlaceholder={docConfig.defaultSubjectPlaceholder}
-            />
-          ) : (
-            <Link className="button" href="/matters/new">
-              Start a guided matter
-            </Link>
-          )}
-        </div>
+        <details style={{ marginTop: "2rem" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: "1.1rem" }}>
+            Existing document tools
+          </summary>
+          <div style={{ marginTop: "1rem" }}>
+            {id === "land-tenancy" ? (
+              <LandInquiryBuilder />
+            ) : docConfig ? (
+              <GenericDocumentBuilder
+                departmentTitle={d.title}
+                documentName={docConfig.documentName}
+                defaultSubjectPlaceholder={docConfig.defaultSubjectPlaceholder}
+              />
+            ) : (
+              <Link className="button" href="/matters/new">
+                Start a guided matter
+              </Link>
+            )}
+          </div>
+        </details>
       </section>
     </AppShell>
   );

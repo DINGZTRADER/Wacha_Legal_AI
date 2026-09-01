@@ -64,7 +64,7 @@ test("shows the shared issue counts on all seven department pages", async ({ pag
     await page.goto(`/departments/${department.id}`);
     await expect(page.getByRole("heading", { name: new RegExp(department.title, "i") })).toBeVisible();
     await expect(page.locator(".issue-card")).toHaveCount(department.count);
-    await expect(page.getByRole("heading", { name: /existing document tools/i })).toBeVisible();
+    await expect(page.getByText("Existing document tools", { exact: true })).toBeVisible();
   }
 });
 
