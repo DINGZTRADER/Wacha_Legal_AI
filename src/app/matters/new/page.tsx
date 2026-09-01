@@ -6,6 +6,8 @@ import { MatterDraftSchema } from "@/features/matters/schema";
 import { LocalMatterRepository, type Matter } from "@/features/matters/store";
 
 const repo = new LocalMatterRepository();
+const LEGACY_SUMMARY_ISSUE_ID = "legacy-summary";
+const LEGACY_SUMMARY_MODULE_VERSION = "legacy-summary-v1";
 
 export default function NewMatter() {
   const [departmentId, setDepartmentId] = useState<DepartmentId>("land-tenancy");
@@ -29,7 +31,18 @@ export default function NewMatter() {
     setError(null);
     setIsSaving(true);
 
-    const validation = MatterDraftSchema.safeParse({ departmentId, summary });
+    // Temporary compatibility bridge until Task 5 replaces this summary form
+    // with the guided intake. The narrative is the user's statement; no
+    // structured answers are inferred from it.
+    const validation = MatterDraftSchema.safeParse({
+      departmentId,
+      issueId: LEGACY_SUMMARY_ISSUE_ID,
+      moduleVersion: LEGACY_SUMMARY_MODULE_VERSION,
+      originalNarrative: summary,
+      answers: [],
+      currentQuestionId: null,
+      status: "review-ready",
+    });
     if (!validation.success) {
       setError(validation.error.issues.map((i) => i.message).join(". "));
       setIsSaving(false);
@@ -67,7 +80,7 @@ export default function NewMatter() {
             <strong>Matter Created Successfully!</strong>
             <p><strong>ID:</strong> {savedMatter.id}</p>
             <p><strong>Department:</strong> {savedMatter.departmentId}</p>
-            <p><strong>Summary:</strong> {savedMatter.summary}</p>
+            <p><strong>Original narrative:</strong> {savedMatter.originalNarrative}</p>
             <p><strong>Created:</strong> {new Date(savedMatter.createdAt).toLocaleString()}</p>
             <button
               onClick={() => {

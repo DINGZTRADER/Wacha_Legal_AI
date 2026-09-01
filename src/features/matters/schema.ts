@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { CaseReviewSchema, DepartmentIdSchema } from "../intake/model";
+import { CaseReviewSchema, DepartmentIdSchema, IdentifierSchema } from "../intake/model";
 
 export const MatterDraftSchema = CaseReviewSchema.extend({
   departmentId: DepartmentIdSchema,
-  issueId: z.string().min(1),
-  moduleVersion: z.string().min(1),
+  issueId: IdentifierSchema,
+  moduleVersion: IdentifierSchema,
   originalNarrative: z.string().trim().min(10).max(5000),
 }).strict();
 

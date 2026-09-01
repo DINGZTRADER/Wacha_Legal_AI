@@ -32,3 +32,35 @@ test("rejects answers without provenance", () => {
   });
   expect(result.success).toBe(false);
 });
+
+test("rejects a whitespace-only question identifier", () => {
+  expect(
+    QuestionSchema.safeParse({
+      id: "   ",
+      prompt: "What happened?",
+      kind: "long-text",
+      required: true,
+    }).success,
+  ).toBe(false);
+});
+
+test.each(["id", "issueId", "moduleVersion"] as const)(
+  "rejects a whitespace-only session %s",
+  (field) => {
+    expect(
+      IntakeSessionSchema.safeParse({
+        id: "case-1",
+        departmentId: "employment",
+        issueId: "dismissal",
+        moduleVersion: "2026-09-01",
+        originalNarrative: "I was dismissed yesterday.",
+        answers: [],
+        currentQuestionId: null,
+        status: "in-progress",
+        createdAt: "2026-09-01T08:00:00.000Z",
+        updatedAt: "2026-09-01T08:00:00.000Z",
+        [field]: "   ",
+      }).success,
+    ).toBe(false);
+  },
+);
