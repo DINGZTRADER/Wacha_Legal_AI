@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type JSX } from "react";
+import { useState, type JSX } from "react";
 import type { DepartmentId } from "../departments/registry";
 import { LocalMatterRepository } from "@/features/matters/store";
 import {
@@ -12,7 +12,7 @@ import {
   getVisibleQuestions,
   reviseAnswer,
 } from "./engine";
-import type { IntakeSession, Question } from "./model";
+import type { IntakeSession, IssueModule, Question } from "./model";
 import { getIssueModule } from "./modules";
 
 const repo = new LocalMatterRepository();
@@ -96,40 +96,45 @@ function formatReviewValue(
 
 export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
   const issue = getIssueModule(props.departmentId, props.issueId);
-  const [session, setSession] = useState<IntakeSession | null>(() =>
-    issue ? createSession(props) : null,
+
+  if (!issue) {
+    return (
+      <section className="intake-shell" aria-live="polite">
+        <div className="result emergency" role="alert">
+          <strong>We could not load this guided intake.</strong>
+          <p>Please return to the issue list and choose your matter again.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <GuidedIntakeFlow
+      key={`${props.departmentId}:${props.issueId}:${props.originalNarrative}`}
+      issue={issue}
+      {...props}
+    />
   );
+}
+
+function GuidedIntakeFlow(
+  props: GuidedIntakeProps & { issue: IssueModule },
+): JSX.Element {
+  const { issue } = props;
+  const [session, setSession] = useState<IntakeSession>(() => createSession(props));
   const [displayedQuestionId, setDisplayedQuestionId] = useState<string | null>(null);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [draftValue, setDraftValue] = useState("");
+  const [draftState, setDraftState] = useState<{ questionId: string | null; value: string }>({
+    questionId: null,
+    value: "",
+  });
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSavingCase, setIsSavingCase] = useState(false);
 
-  useEffect(() => {
-    if (!issue) {
-      setSession(null);
-      setDisplayedQuestionId(null);
-      setEditingQuestionId(null);
-      setDraftValue("");
-      setSaveMessage(null);
-      setErrorMessage(null);
-      setIsSavingCase(false);
-      return;
-    }
-
-    setSession(createSession(props));
-    setDisplayedQuestionId(null);
-    setEditingQuestionId(null);
-    setDraftValue("");
-    setSaveMessage(null);
-    setErrorMessage(null);
-    setIsSavingCase(false);
-  }, [issue, props.departmentId, props.issueId, props.originalNarrative]);
-
-  const visibleQuestions = session && issue ? getVisibleQuestions(issue, session.answers) : [];
-  const currentQuestion = session && issue ? getCurrentQuestion(session, issue) : null;
-  const reviewReady = Boolean(session && session.status === "review-ready");
+  const visibleQuestions = getVisibleQuestions(issue, session.answers);
+  const currentQuestion = getCurrentQuestion(session, issue);
+  const reviewReady = session.status === "review-ready";
   const activeQuestionId =
     editingQuestionId ??
     displayedQuestionId ??
@@ -139,35 +144,25 @@ export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
       ? null
       : visibleQuestions.find((question) => question.id === activeQuestionId) ?? null;
   const activeAnswer = activeQuestion
-    ? session?.answers.find((answer) => answer.questionId === activeQuestion.id)
+    ? session.answers.find((answer) => answer.questionId === activeQuestion.id)
     : undefined;
   const activeQuestionIndex = activeQuestion
     ? visibleQuestions.findIndex((question) => question.id === activeQuestion.id) + 1
     : visibleQuestions.length;
-  const review = session && issue ? buildCaseReview(session, issue) : null;
-  const progress = session && issue ? getProgress(session, issue) : null;
+  const review = buildCaseReview(session, issue);
+  const progress = getProgress(session, issue);
 
   const activeQuestionKind = activeQuestion?.kind;
   const activeQuestionValue = activeAnswer?.value;
+  const draftValue =
+    activeQuestionId && activeQuestionKind
+      ? draftState.questionId === activeQuestionId
+        ? draftState.value
+        : getDraftValue(activeQuestionKind, activeQuestionValue)
+      : "";
 
-  useEffect(() => {
-    if (!activeQuestionId || !activeQuestionKind) {
-      setDraftValue("");
-      return;
-    }
-
-    setDraftValue(getDraftValue(activeQuestionKind, activeQuestionValue));
-  }, [activeQuestionId, activeQuestionKind, activeQuestionValue]);
-
-  if (!issue || !session || !review || !progress) {
-    return (
-      <section className="intake-shell" aria-live="polite">
-        <div className="result emergency" role="alert">
-          <strong>We could not load this guided intake.</strong>
-          <p>Please return to the issue list and choose your matter again.</p>
-        </div>
-      </section>
-    );
+  function setDraftValue(value: string) {
+    setDraftState({ questionId: activeQuestion?.id ?? null, value });
   }
 
   function startEditing(questionId: string) {
@@ -197,7 +192,7 @@ export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
   }
 
   function handleAdvance() {
-    if (!activeQuestion || !isDraftValid(activeQuestion, draftValue)) {
+    if (!activeQuestion || !session || !issue || !isDraftValid(activeQuestion, draftValue)) {
       return;
     }
 
@@ -239,6 +234,10 @@ export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
   }
 
   async function handleSaveCase() {
+    if (!session || !review) {
+      return;
+    }
+
     setIsSavingCase(true);
     setSaveMessage(null);
     setErrorMessage(null);
@@ -248,8 +247,13 @@ export function GuidedIntake(props: GuidedIntakeProps): JSX.Element {
         departmentId: session.departmentId,
         issueId: session.issueId,
         moduleVersion: session.moduleVersion,
-        originalNarrative: session.originalNarrative,
-        ...review,
+        originalNarrative: review.originalNarrative,
+        answers: review.answers,
+        labelledAnswers: review.labelledAnswers,
+        missingQuestionIds: review.missingQuestionIds,
+        conflicts: review.conflicts,
+        currentQuestionId: review.currentQuestionId,
+        status: review.status,
       });
       setSaveMessage(SESSION_SAVE_COPY);
     } catch {

@@ -29,6 +29,7 @@ export function ConciergePanel() {
   const result = useMemo(() => (fullText ? routeNarrative(fullText) : null), [fullText]);
   const safety = useMemo(() => (fullText ? assessSafety(fullText) : null), [fullText]);
   const department = result?.departmentId ? getDepartment(result.departmentId) : null;
+  const guidedDepartmentHref = department ? `/matters/new?department=${department.id}` : null;
 
   const handleSubmit = (text: string) => {
     const trimmed = text.trim();
@@ -72,7 +73,7 @@ export function ConciergePanel() {
       </div>
 
       <p className="muted" style={{ fontSize: "0.92rem", color: "#6b7280", marginBottom: "1.25rem" }}>
-        Describe your situation, or select a quick topic below. Wacha will analyze safety risks, direct you to the exact department, and prepare your document summaries automatically.
+        Describe your situation, or select a quick topic below. Wacha will analyze safety risks and direct you to the right guided intake path without putting your story in the URL.
       </p>
 
       {/* Quick Topic Starter Chips */}
@@ -198,9 +199,9 @@ export function ConciergePanel() {
 
               {/* Direct Next Action Buttons */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "1rem" }}>
-                {department && (
+                {guidedDepartmentHref && department && (
                   <Link
-                    href={`/departments/${department.id}`}
+                    href={guidedDepartmentHref}
                     style={{
                       padding: "0.65rem 1.25rem",
                       borderRadius: "6px",
@@ -214,27 +215,29 @@ export function ConciergePanel() {
                       gap: "0.5rem",
                     }}
                   >
-                    Open {department.title} Tools & Generator →
+                    Choose a {department.title} issue →
                   </Link>
                 )}
 
-                <Link
-                  href="/matters/new"
-                  style={{
-                    padding: "0.65rem 1.25rem",
-                    borderRadius: "6px",
-                    background: "#1e293b",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    fontWeight: "600",
-                    fontSize: "0.9rem",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  Save as Immutable Legal Matter 📁
-                </Link>
+                {department && (
+                  <Link
+                    href={`/departments/${department.id}`}
+                    style={{
+                      padding: "0.65rem 1.25rem",
+                      borderRadius: "6px",
+                      background: "#1e293b",
+                      color: "#ffffff",
+                      textDecoration: "none",
+                      fontWeight: "600",
+                      fontSize: "0.9rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    Review {department.title} tools
+                  </Link>
+                )}
 
                 <Link
                   href="/advocate"
@@ -295,7 +298,7 @@ export function ConciergePanel() {
               {DEPARTMENTS.map((dept) => (
                 <Link
                   key={dept.id}
-                  href={`/departments/${dept.id}`}
+                  href={`/matters/new?department=${dept.id}`}
                   style={{
                     padding: "0.5rem 0.75rem",
                     borderRadius: "6px",
