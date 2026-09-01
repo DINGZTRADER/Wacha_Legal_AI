@@ -5,6 +5,12 @@
 **Scope:** All seven Wacha Legal AI departments  
 **Primary output:** User-reviewable downloadable PDF
 
+### Implementation status — 2026-09-01
+
+Stage 1 implementation is recorded in the [approved guided-intake plan](../plans/2026-09-01-guided-intake-engine.md). The delivered slice covers department and issue selection, one-question-at-a-time intake, provenance-aware answers, review/correction, and current-session progress across all seven departments.
+
+The Stage 1 boundary remains explicit: no durable private storage, evidence upload, risk scoring, legal analysis or citations, document drafting, PDF generation, remote AI, payments, SMS, or advocate marketplace. This status note does not mark the overall specification complete; the remaining package, privacy, evidence, legal-source, drafting, and release requirements still require separate implementation and verification.
+
 ## 1. Purpose
 
 Wacha Legal AI will guide an average Ugandan through a legal problem without requiring them to compose a formal case summary. The user explains the situation once by voice or text. Wacha then asks one short, relevant question at a time, organises the answers, identifies information requiring attention, cites potentially relevant Ugandan law, and prepares a reviewable case package and draft document where appropriate.

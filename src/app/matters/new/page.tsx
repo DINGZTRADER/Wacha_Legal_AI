@@ -72,12 +72,13 @@ function NewMatterContent() {
 
   useEffect(() => {
     const continuation = readConciergeContinuation();
+    const pendingChooser = continuation === "pending" && !rawIssueId;
     const matchesIssue = continuation === `issue:${rawIssueId}`;
     // Hydrate client-only continuation state after the first render to avoid SSR mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOriginalNarrative(matchesIssue ? readStoredNarrative() : "");
+    setOriginalNarrative(pendingChooser || matchesIssue ? readStoredNarrative() : "");
 
-    if (matchesIssue) {
+    if (matchesIssue || (rawIssueId && continuation === "pending")) {
       try {
         window.sessionStorage.removeItem(CONTINUATION_KEY);
       } catch {
