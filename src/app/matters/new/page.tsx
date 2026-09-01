@@ -34,12 +34,11 @@ function readStoredNarrative(): string {
   return "";
 }
 
-function readConciergeContinuation(): boolean {
+function readConciergeContinuation(): string | null {
   try {
-    const value = window.sessionStorage.getItem(CONTINUATION_KEY);
-    return value === "pending";
+    return window.sessionStorage.getItem(CONTINUATION_KEY);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -73,11 +72,12 @@ function NewMatterContent() {
 
   useEffect(() => {
     const continuation = readConciergeContinuation();
+    const matchesIssue = continuation === `issue:${rawIssueId}`;
     // Hydrate client-only continuation state after the first render to avoid SSR mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOriginalNarrative(continuation ? readStoredNarrative() : "");
+    setOriginalNarrative(matchesIssue ? readStoredNarrative() : "");
 
-    if (continuation && rawIssueId) {
+    if (matchesIssue) {
       try {
         window.sessionStorage.removeItem(CONTINUATION_KEY);
       } catch {
@@ -117,7 +117,20 @@ function NewMatterContent() {
 
           <div className="issue-grid">
             {issueCards.map((item, index) => (
-              <Link key={item.id} className="issue-card" href={item.href}>
+              <Link
+                key={item.id}
+                className="issue-card"
+                href={item.href}
+                onClick={() => {
+                  try {
+                    if (window.sessionStorage.getItem(CONTINUATION_KEY) === "pending") {
+                      window.sessionStorage.setItem(CONTINUATION_KEY, `issue:${item.id}`);
+                    }
+                  } catch {
+                    // Ignore storage error
+                  }
+                }}
+              >
                 <span className="number">{String(index + 1).padStart(2, "0")}</span>
                 <h2>{item.title}</h2>
                 <p>{item.description}</p>
