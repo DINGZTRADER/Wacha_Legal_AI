@@ -1,4 +1,4 @@
-import type { IssueModule } from "./model";
+import type { CaseReview, IssueModule } from "./model";
 import {
   answerQuestion,
   buildCaseReview,
@@ -23,6 +23,7 @@ const branchIssue = {
       prompt: "Did you receive notice?",
       kind: "yes-no",
       required: true,
+      answerProvenance: "USER_STATEMENT",
     },
     {
       id: "dismissal-reason",
@@ -30,12 +31,14 @@ const branchIssue = {
       kind: "short-text",
       required: true,
       showWhen: { questionId: "role", equals: true },
+      answerProvenance: "THIRD_PARTY_STATEMENT",
     },
     {
       id: "desired-outcome",
       prompt: "What outcome do you want?",
       kind: "short-text",
       required: true,
+      answerProvenance: "USER_STATEMENT",
     },
   ],
 } as IssueModule;
@@ -111,6 +114,72 @@ test("routes conditional questions only when their branch answer matches", () =>
   ]);
 });
 
+test("resolves child-before-parent visibility declaratively and guards cycles", () => {
+  const childBeforeParent = {
+    ...branchIssue,
+    questions: [
+      branchIssue.questions[1],
+      branchIssue.questions[0],
+      branchIssue.questions[2],
+    ],
+  } as IssueModule;
+  const answers = [
+    {
+      questionId: "role",
+      value: true,
+      provenance: "USER_STATEMENT" as const,
+      answeredAt: ANSWERED_AT,
+    },
+    {
+      questionId: "dismissal-reason",
+      value: "Leave within seven days.",
+      provenance: "THIRD_PARTY_STATEMENT" as const,
+      answeredAt: REVISED_AT,
+    },
+  ];
+  const session = { ...branchSession(), answers };
+
+  expect(getVisibleQuestions(childBeforeParent, answers).map(({ id }) => id)).toEqual([
+    "dismissal-reason",
+    "role",
+    "desired-outcome",
+  ]);
+  expect(getProgress(session, childBeforeParent)).toEqual({ answered: 2, total: 3, percent: 67 });
+
+  const corrected = reviseAnswer(
+    session,
+    childBeforeParent,
+    { questionId: "role", value: false },
+    "2026-09-01T08:05:00.000Z",
+  );
+  expect(corrected.answers.map(({ questionId }) => questionId)).toEqual(["role"]);
+  expect(getProgress(corrected, childBeforeParent)).toEqual({ answered: 1, total: 2, percent: 50 });
+
+  const cyclicIssue = {
+    id: "cycle",
+    title: "Cycle",
+    questions: [
+      {
+        id: "a",
+        prompt: "A?",
+        kind: "yes-no",
+        required: true,
+        answerProvenance: "USER_STATEMENT",
+        showWhen: { questionId: "b", equals: true },
+      },
+      {
+        id: "b",
+        prompt: "B?",
+        kind: "yes-no",
+        required: true,
+        answerProvenance: "USER_STATEMENT",
+        showWhen: { questionId: "a", equals: true },
+      },
+    ],
+  } as IssueModule;
+  expect(getVisibleQuestions(cyclicIssue, [])).toEqual([]);
+});
+
 test("removes hidden descendant answers after a branch correction", () => {
   const withNotice = answerQuestion(
     branchSession(),
@@ -164,6 +233,25 @@ test("copies provenance from question definitions and timestamps revisions", () 
   });
 });
 
+test("copies provenance from the supplied issue instead of global module state", () => {
+  const divergentIssue = {
+    ...branchIssue,
+    questions: branchIssue.questions.map((question) =>
+      question.id === "role"
+        ? { ...question, answerProvenance: "USER_ALLEGATION" as const }
+        : question,
+    ),
+  } as IssueModule;
+  const answered = answerQuestion(
+    branchSession(),
+    divergentIssue,
+    { questionId: "role", value: false },
+    ANSWERED_AT,
+  );
+
+  expect(answered.answers[0].provenance).toBe("USER_ALLEGATION");
+});
+
 test("calculates visible progress and becomes review-ready after required answers", () => {
   const first = answerQuestion(
     branchSession(),
@@ -215,6 +303,7 @@ test("projects ordered labelled answers, explicit missing fields, and no invente
     ANSWERED_AT,
   );
   const review = buildCaseReview(session, branchIssue);
+  const publicReview: CaseReview = review;
 
   expect(review.originalNarrative).toBe("I received a notice from my employer.");
   expect(review.labelledAnswers).toEqual([
@@ -233,6 +322,7 @@ test("projects ordered labelled answers, explicit missing fields, and no invente
   ]);
   expect(review.missingQuestionIds).toEqual(["desired-outcome"]);
   expect(review.conflicts).toEqual([]);
+  expect(publicReview).toBe(review);
   expect(JSON.stringify(review)).not.toContain("yesterday");
   expect(JSON.stringify(review)).not.toContain("notice was unlawful");
 });

@@ -45,6 +45,7 @@ const BaseQuestionSchema = z
     id: IdentifierSchema,
     prompt: z.string().trim().min(1),
     required: z.boolean(),
+    answerProvenance: AnswerProvenanceSchema,
     showWhen: QuestionShowWhenSchema.optional(),
   })
   .strict();
@@ -113,6 +114,20 @@ export const CaseReviewSchema = z
   .object({
     originalNarrative: z.string().min(1).max(5000),
     answers: z.array(IntakeAnswerSchema),
+    labelledAnswers: z
+      .array(
+        z
+          .object({
+            questionId: IdentifierSchema,
+            label: z.string().trim().min(1),
+            value: z.union([z.string().trim().min(1).max(5000), z.boolean()]).nullable(),
+            provenance: AnswerProvenanceSchema.nullable(),
+          })
+          .strict(),
+      )
+      .default([]),
+    missingQuestionIds: z.array(IdentifierSchema).default([]),
+    conflicts: z.array(z.never()).default([]),
     currentQuestionId: IdentifierSchema.nullable(),
     status: z.enum(["in-progress", "review-ready"]),
   })

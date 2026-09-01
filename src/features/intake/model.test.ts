@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { IntakeSessionSchema, QuestionSchema } from "./model";
+import { CaseReviewSchema, IntakeSessionSchema, QuestionSchema } from "./model";
 
 test("accepts a short single-choice intake question", () => {
   expect(
@@ -8,6 +8,7 @@ test("accepts a short single-choice intake question", () => {
       prompt: "Are you the landlord or the tenant?",
       kind: "single-choice",
       required: true,
+      answerProvenance: "USER_STATEMENT",
       options: [
         { value: "landlord", label: "Landlord" },
         { value: "tenant", label: "Tenant" },
@@ -40,6 +41,7 @@ test("rejects a whitespace-only question identifier", () => {
       prompt: "What happened?",
       kind: "long-text",
       required: true,
+      answerProvenance: "USER_STATEMENT",
     }).success,
   ).toBe(false);
 });
@@ -64,3 +66,32 @@ test.each(["id", "issueId", "moduleVersion"] as const)(
     ).toBe(false);
   },
 );
+
+test("retains public question provenance and validates explicit review projection fields", () => {
+  const question = QuestionSchema.parse({
+    id: "reported-reason",
+    prompt: "What reason did your employer give?",
+    kind: "short-text",
+    required: true,
+    answerProvenance: "THIRD_PARTY_STATEMENT",
+  });
+  const review = CaseReviewSchema.parse({
+    originalNarrative: "My employer ended my employment.",
+    answers: [],
+    labelledAnswers: [
+      {
+        questionId: question.id,
+        label: question.prompt,
+        value: null,
+        provenance: null,
+      },
+    ],
+    missingQuestionIds: [question.id],
+    conflicts: [],
+    currentQuestionId: question.id,
+    status: "in-progress",
+  });
+
+  expect(question.answerProvenance).toBe("THIRD_PARTY_STATEMENT");
+  expect(review.missingQuestionIds).toEqual(["reported-reason"]);
+});

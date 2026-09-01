@@ -12,24 +12,11 @@ import {
   type IssueModule,
   type Question as IntakeQuestion,
 } from "./model";
-import { INTAKE_MODULE_BLUEPRINTS, getIntakeModule, getIssueModule } from "./modules";
+import { getIntakeModule, getIssueModule } from "./modules";
 
 type AnswerInput = {
   questionId: string;
   value: string | boolean;
-};
-
-type LabelledAnswer = {
-  questionId: string;
-  label: string;
-  value: string | boolean | null;
-  provenance: IntakeAnswer["provenance"] | null;
-};
-
-type CaseReviewProjection = CaseReview & {
-  labelledAnswers: readonly LabelledAnswer[];
-  missingQuestionIds: readonly string[];
-  conflicts: readonly never[];
 };
 
 export function createIntakeSession(
@@ -89,29 +76,41 @@ export function getVisibleQuestions(
   issue: IssueModule,
   answers: readonly IntakeAnswer[],
 ): readonly IntakeQuestion[] {
-  IssueModuleSchema.parse(issue);
+  const parsedIssue = IssueModuleSchema.parse(issue);
   const parsedAnswers = IntakeAnswerSchema.array().parse(answers);
   const answersByQuestion = new Map(
     parsedAnswers.map((answer) => [answer.questionId, answer.value] as const),
   );
-  const visibleQuestionIds = new Set<string>();
+  const questionsById = new Map(
+    parsedIssue.questions.map((question) => [question.id, question] as const),
+  );
+  const visibility = new Map<string, boolean>();
 
-  return issue.questions.filter((question) => {
+  function isVisible(questionId: string, visiting: ReadonlySet<string>): boolean {
+    const cached = visibility.get(questionId);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const question = questionsById.get(questionId);
+    if (!question || visiting.has(questionId)) {
+      return false;
+    }
+
     if (!question.showWhen) {
-      visibleQuestionIds.add(question.id);
+      visibility.set(questionId, true);
       return true;
     }
 
-    const isVisible =
-      visibleQuestionIds.has(question.showWhen.questionId) &&
+    const nextVisiting = new Set(visiting).add(questionId);
+    const result =
+      isVisible(question.showWhen.questionId, nextVisiting) &&
       answersByQuestion.get(question.showWhen.questionId) === question.showWhen.equals;
+    visibility.set(questionId, result);
+    return result;
+  }
 
-    if (isVisible) {
-      visibleQuestionIds.add(question.id);
-    }
-
-    return isVisible;
-  });
+  return parsedIssue.questions.filter(({ id }) => isVisible(id, new Set()));
 }
 
 export function getCurrentQuestion(
@@ -157,7 +156,7 @@ export function getProgress(
 export function buildCaseReview(
   session: IntakeSession,
   issue: IssueModule,
-): CaseReviewProjection {
+): CaseReview {
   const parsedSession = IntakeSessionSchema.parse(session);
   const visibleQuestions = getVisibleQuestions(issue, parsedSession.answers);
   const answersByQuestion = new Map(
@@ -170,7 +169,7 @@ export function buildCaseReview(
   const missingQuestionIds = visibleQuestions
     .filter(({ id }) => !answersByQuestion.has(id))
     .map(({ id }) => id);
-  const labelledAnswers = visibleQuestions.map((question): LabelledAnswer => {
+  const labelledAnswers = visibleQuestions.map((question) => {
     const answer = answersByQuestion.get(question.id);
     return {
       questionId: question.id,
@@ -179,19 +178,15 @@ export function buildCaseReview(
       provenance: answer?.provenance ?? null,
     };
   });
-  const review = CaseReviewSchema.parse({
+  return CaseReviewSchema.parse({
     originalNarrative: parsedSession.originalNarrative,
     answers: orderedAnswers,
-    currentQuestionId: parsedSession.currentQuestionId,
-    status: parsedSession.status,
-  });
-
-  return {
-    ...review,
     labelledAnswers,
     missingQuestionIds,
     conflicts: [],
-  };
+    currentQuestionId: parsedSession.currentQuestionId,
+    status: parsedSession.status,
+  });
 }
 
 function updateAnswer(
@@ -225,7 +220,7 @@ function updateAnswer(
   const nextAnswer = IntakeAnswerSchema.parse({
     questionId: input.questionId,
     value: input.value,
-    provenance: getQuestionProvenance(parsedSession, input.questionId),
+    provenance: question.answerProvenance,
     answeredAt: isRevision && previousAnswer ? previousAnswer.answeredAt : now,
     revisedAt: isRevision ? now : undefined,
   });
@@ -267,19 +262,4 @@ function validateQuestionValue(question: IntakeQuestion, value: string | boolean
   ) {
     throw new Error(`Invalid option for intake question: ${question.id}`);
   }
-}
-
-function getQuestionProvenance(
-  session: IntakeSession,
-  questionId: string,
-): IntakeAnswer["provenance"] {
-  const departmentBlueprint = INTAKE_MODULE_BLUEPRINTS[session.departmentId];
-  const issueBlueprint = departmentBlueprint.issues.find(({ id }) => id === session.issueId);
-  const questionBlueprint = issueBlueprint?.questions.find(({ id }) => id === questionId);
-
-  if (!questionBlueprint) {
-    throw new Error(`Missing provenance for intake question: ${questionId}`);
-  }
-
-  return questionBlueprint.answerProvenance;
 }

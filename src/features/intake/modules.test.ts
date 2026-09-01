@@ -18,7 +18,7 @@ const CORE_QUESTION_IDS = [
 
 describe("intake module registry", () => {
   test("defines versioned issues and valid questions for every department", async () => {
-    const { INTAKE_MODULES, INTAKE_MODULE_BLUEPRINTS } = await import("./modules");
+    const { INTAKE_MODULES } = await import("./modules");
 
     expect(Object.keys(INTAKE_MODULES).sort()).toEqual(
       DEPARTMENTS.map((department) => department.id).sort(),
@@ -26,7 +26,6 @@ describe("intake module registry", () => {
 
     for (const department of DEPARTMENTS) {
       const intakeModule = INTAKE_MODULES[department.id];
-      const blueprintModule = INTAKE_MODULE_BLUEPRINTS[department.id];
 
       expect(DepartmentIntakeModuleSchema.safeParse(intakeModule).success).toBe(true);
       expect(intakeModule.version).toBe("2026-09-01");
@@ -37,7 +36,6 @@ describe("intake module registry", () => {
 
       for (let index = 0; index < intakeModule.issues.length; index += 1) {
         const issue = intakeModule.issues[index];
-        const blueprintIssue = blueprintModule.issues[index];
         const questionIds = issue.questions.map((question) => question.id);
 
         expect(issue.questions.length).toBeGreaterThanOrEqual(4);
@@ -51,10 +49,8 @@ describe("intake module registry", () => {
 
         for (let questionIndex = 0; questionIndex < issue.questions.length; questionIndex += 1) {
           const question = issue.questions[questionIndex];
-          const blueprintQuestion = blueprintIssue.questions[questionIndex];
-
           expect(question.prompt.length).toBeLessThanOrEqual(100);
-          expect(ALLOWED_PROVENANCE.has(blueprintQuestion.answerProvenance)).toBe(true);
+          expect(ALLOWED_PROVENANCE.has(question.answerProvenance)).toBe(true);
         }
       }
     }

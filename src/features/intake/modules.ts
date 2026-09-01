@@ -171,7 +171,7 @@ function buildModule(
     issues: issues.map(({ id, title, questions }) => ({
       id,
       title,
-      questions: questions.map(({ answerProvenance, ...question }) => question),
+      questions,
     })),
   });
 }
