@@ -75,11 +75,17 @@ test("creates a deterministic session and asks one unanswered question at a time
     moduleVersion: "2026-09-01",
     createdAt: CREATED_AT,
     updatedAt: CREATED_AT,
-    currentQuestionId: "role",
+    currentQuestionId: "urgent-triage",
   });
 
-  const updated = answerQuestion(
+  const triaged = answerQuestion(
     session,
+    issue,
+    { questionId: "urgent-triage", value: "not-urgent" },
+    ANSWERED_AT,
+  );
+  const updated = answerQuestion(
+    triaged,
     issue,
     { questionId: "role", value: "employee" },
     ANSWERED_AT,
