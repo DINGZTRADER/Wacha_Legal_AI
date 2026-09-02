@@ -133,7 +133,16 @@ textarea { min-height: 120px; resize: vertical; }
 .intake-summary-kicker { margin: 0; color: var(--brand); text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; font-weight: 800; }
 .intake-summary h2 { margin: 0; font-size: 1.55rem; }
 .intake-summary-copy { margin: 0; color: var(--muted); max-width: 72ch; }
-.intake-summary-meta { margin: 0; color: var(--muted); font-size: .85rem; }
+.intake-about { margin-top: .35rem; color: var(--muted); font-size: .85rem; }
+.intake-about summary { width: fit-content; cursor: pointer; color: var(--brand-deep); font-weight: 800; }
+.intake-about p { margin: .45rem 0 0; }
+.intake-trust { display: grid; gap: .45rem; padding: 1rem 1.15rem; border: 1px solid #b9d8ed; border-left: 4px solid var(--brand); border-radius: 18px; background: #f5fbff; color: var(--muted); }
+.intake-trust strong { color: var(--brand-deep); }
+.intake-trust p { margin: 0; }
+.intake-trust nav { display: flex; flex-wrap: wrap; gap: .85rem 1.1rem; font-size: .85rem; font-weight: 800; }
+.intake-trust a { color: var(--brand-deep); }
+.intake-urgent { max-width: 760px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .intake-progress { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 1.15rem; border: 1px solid #d5e2f0; border-radius: 18px; background: linear-gradient(180deg, #f9fbff, #eef5fb); font-weight: 700; }
 .intake-progress p { margin: 0; }
 .intake-question { margin: 0; padding: 1.35rem; border: 1px solid #d5e2f0; border-radius: 24px; background: white; box-shadow: 0 18px 42px #183d660d; }

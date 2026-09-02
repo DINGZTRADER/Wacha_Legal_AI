@@ -53,10 +53,12 @@ const AFFIDAVIT_OUTCOME_OPTIONS = [
 ] as const satisfies readonly QuestionOption[];
 
 const LAND_ROLE_OPTIONS = [
-  { value: "owner-family", label: "Owner, family, or occupier" },
-  { value: "tenant-landlord", label: "Tenant or landlord" },
+  { value: "tenant-occupant", label: "Tenant or occupant" },
+  { value: "landlord-owner", label: "Landlord or property owner" },
+  { value: "family-occupancy", label: "Family member claiming a right to occupy" },
   { value: "buyer-seller", label: "Buyer or seller" },
-  { value: "representative", label: "Representative or helper" },
+  { value: "helper", label: "Helping someone else" },
+  { value: "not-sure", label: "Not sure" },
 ] as const satisfies readonly QuestionOption[];
 
 const DEBT_ROLE_OPTIONS = [
@@ -101,6 +103,12 @@ const VEHICLE_ROLE_OPTIONS = [
   { value: "representative", label: "Representative or helper" },
 ] as const satisfies readonly QuestionOption[];
 
+const URGENT_TRIAGE_OPTIONS = [
+  { value: "urgent", label: "Yes — notice, lockout, threat, or removal" },
+  { value: "not-urgent", label: "No — no urgent safety or deadline issue" },
+  { value: "not-sure", label: "Not sure" },
+] as const satisfies readonly QuestionOption[];
+
 function singleChoiceQuestion(
   id: string,
   prompt: string,
@@ -140,6 +148,12 @@ function createIssue<const Config extends IssueQuestionConfig>(
     id: config.id,
     title: config.title,
     questions: [
+      singleChoiceQuestion(
+        "urgent-triage",
+        "Urgent safety/deadline check: threatened, locked out, arrested, harmed, or given a deadline?",
+        URGENT_TRIAGE_OPTIONS,
+        "USER_STATEMENT",
+      ),
       singleChoiceQuestion("role", config.rolePrompt, config.roleOptions, "USER_STATEMENT"),
       textQuestion("what-happened", config.whatPrompt, "long-text", "USER_STATEMENT"),
       textQuestion("timing", "When did this happen or start?", "short-text", "USER_STATEMENT"),
