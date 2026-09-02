@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type JSX } from "react";
+import Link from "next/link";
 import type { DepartmentId } from "../departments/registry";
 import { LocalMatterRepository } from "@/features/matters/store";
 import {
@@ -21,6 +22,7 @@ const EMPTY_NARRATIVE_COPY =
   "We'll build the details together through the guided questions.";
 const SESSION_SAVE_COPY =
   "Saved for this session. Private device storage arrives in the next release stage.";
+const INTAKE_TIME_COPY = "About 3 minutes remaining";
 
 type GuidedIntakeProps = {
   departmentId: DepartmentId;
@@ -137,6 +139,7 @@ function GuidedIntakeFlow(
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSavingCase, setIsSavingCase] = useState(false);
+  const [urgentRoute, setUrgentRoute] = useState(false);
 
   const visibleQuestions = getVisibleQuestions(issue, session.answers);
   const currentQuestion = getCurrentQuestion(session, issue);
@@ -226,6 +229,11 @@ function GuidedIntakeFlow(
     setSaveMessage(null);
     setErrorMessage(null);
 
+    if (activeQuestion.id === "urgent-triage" && submittedValue === "urgent") {
+      setUrgentRoute(true);
+      return;
+    }
+
     if (editingQuestionId) {
       setEditingQuestionId(null);
       setDisplayedQuestionId(null);
@@ -269,7 +277,14 @@ function GuidedIntakeFlow(
     }
   }
 
+  if (urgentRoute) {
+    return <UrgentGuidance departmentId={props.departmentId} />;
+  }
+
   const questionProgress = reviewReady ? visibleQuestions.length : activeQuestionIndex;
+  const displayedPercent = reviewReady
+    ? 100
+    : Math.round((questionProgress / Math.max(progress.total, 1)) * 100);
 
   return (
     <section className="intake-shell">
@@ -287,7 +302,26 @@ function GuidedIntakeFlow(
         <p className="intake-summary-copy">
           {props.originalNarrative.trim() || EMPTY_NARRATIVE_COPY}
         </p>
-        <p className="intake-summary-meta">Module version {session.moduleVersion}</p>
+        <details className="intake-about">
+          <summary>About this guidance</summary>
+          <p>Module version {session.moduleVersion}. Wacha organises what you tell us; it does not replace advice from an enrolled advocate.</p>
+        </details>
+      </section>
+
+      <section className="intake-trust" aria-label="Privacy and next steps">
+        <strong>Your information and next steps</strong>
+        <p>Use only the details needed for this matter. Do not share passwords, PINs, or bank details.</p>
+        <p>Answers are kept for this session. At the end, you can review what you told us, see missing facts, and decide whether to seek advocate help.</p>
+        <nav aria-label="Intake guidance links">
+          <a href="#privacy-guidance">Privacy guidance</a>
+          <a href="#data-retention">How saving works</a>
+          <a href="#delete-info">Delete this session</a>
+          <a href="#urgent-help">Urgent help</a>
+        </nav>
+        <div className="sr-only" id="privacy-guidance">This prototype keeps intake answers in the current session only.</div>
+        <div className="sr-only" id="data-retention">No account or long-term cloud storage is used by this intake prototype.</div>
+        <div className="sr-only" id="delete-info">Close this tab to clear the current intake session.</div>
+        <div className="sr-only" id="urgent-help">For immediate danger, contact emergency services or the police and seek an enrolled advocate.</div>
       </section>
 
       {errorMessage ? (
@@ -308,9 +342,9 @@ function GuidedIntakeFlow(
             <>
               <section className="intake-progress" aria-label="Intake progress">
                 <p>
-                  Question {questionProgress} of {progress.total}
+                  Step {questionProgress} of {progress.total}
                 </p>
-                <p>{progress.percent}% complete</p>
+                <p>{displayedPercent}% complete · {INTAKE_TIME_COPY}</p>
               </section>
 
               <fieldset className="intake-question">
@@ -402,14 +436,19 @@ function GuidedIntakeFlow(
               </fieldset>
 
               <div className="intake-actions">
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={handleBack}
-                  disabled={editingQuestionId === null && activeQuestionIndex === 1}
-                >
-                  {editingQuestionId ? "Back to review" : "Back"}
-                </button>
+                {editingQuestionId ? (
+                  <button type="button" className="button secondary" onClick={handleBack}>
+                    Back to review
+                  </button>
+                ) : activeQuestionIndex === 1 ? (
+                  <Link className="button secondary" href={`/departments/${props.departmentId}`}>
+                    Exit intake
+                  </Link>
+                ) : (
+                  <button type="button" className="button secondary" onClick={handleBack}>
+                    Back
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleAdvance}
@@ -425,9 +464,9 @@ function GuidedIntakeFlow(
         <section className="intake-review">
           <section className="intake-progress" aria-label="Intake progress">
             <p>
-              Question {visibleQuestions.length} of {visibleQuestions.length}
+              Step {visibleQuestions.length} of {visibleQuestions.length}
             </p>
-            <p>{progress.percent}% complete</p>
+            <p>100% complete</p>
           </section>
 
           <h2>What you told us</h2>
@@ -463,6 +502,33 @@ function GuidedIntakeFlow(
           </div>
         </section>
       )}
+    </section>
+  );
+}
+
+function UrgentGuidance({ departmentId }: { departmentId: DepartmentId }): JSX.Element {
+  return (
+    <section className="intake-shell intake-urgent" id="urgent-help" aria-live="polite">
+      <div className="result emergency" role="alert">
+        <strong>This may need urgent help.</strong>
+        <p>
+          If someone is in danger, you have been locked out or physically removed, or a deadline is close, contact the police or emergency services (999 or 112) and seek an enrolled advocate as soon as possible.
+        </p>
+        <p>
+          Keep any notice, messages, photographs, receipts, or other documents safe. Do not put yourself at risk to collect evidence.
+        </p>
+        <p>
+          Wacha cannot make an emergency report or represent you. The Community Liaison Office at your local police station may also help explain the next safe reporting step.
+        </p>
+      </div>
+      <div className="intake-actions">
+        <Link className="button secondary" href={`/departments/${departmentId}`}>
+          Return to issue choices
+        </Link>
+        <Link className="button" href="/advocate">
+          Seek advocate help →
+        </Link>
+      </div>
     </section>
   );
 }

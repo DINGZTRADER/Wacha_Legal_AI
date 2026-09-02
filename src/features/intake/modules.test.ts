@@ -39,7 +39,7 @@ describe("intake module registry", () => {
         const questionIds = issue.questions.map((question) => question.id);
 
         expect(issue.questions.length).toBeGreaterThanOrEqual(4);
-        expect(issue.questions.length).toBeLessThanOrEqual(7);
+        expect(issue.questions.length).toBeLessThanOrEqual(8);
         expect(issue.questions[0]?.showWhen).toBeUndefined();
         expect(new Set(questionIds).size).toBe(questionIds.length);
         expect(questionIds).toEqual(expect.arrayContaining([...CORE_QUESTION_IDS]));
@@ -54,6 +54,33 @@ describe("intake module registry", () => {
         }
       }
     }
+  });
+
+  test("starts every issue with an urgent safety and deadline check", async () => {
+    const { INTAKE_MODULES } = await import("./modules");
+
+    for (const intakeModule of Object.values(INTAKE_MODULES)) {
+      for (const issue of intakeModule.issues) {
+        expect(issue.questions[0]?.id).toBe("urgent-triage");
+        expect(issue.questions[0]?.kind).toBe("single-choice");
+      }
+    }
+  });
+
+  test("uses distinct plain-language land roles", async () => {
+    const { getIssueModule } = await import("./modules");
+    const issue = getIssueModule("land-tenancy", "land-sale-transfer-title");
+    const role = issue?.questions.find(({ id }) => id === "role");
+
+    expect(role?.kind).toBe("single-choice");
+    expect(role && role.kind === "single-choice" ? role.options.map(({ label }) => label) : []).toEqual([
+      "Tenant or occupant",
+      "Landlord or property owner",
+      "Family member claiming a right to occupy",
+      "Buyer or seller",
+      "Helping someone else",
+      "Not sure",
+    ]);
   });
 
   test("returns undefined for an unknown issue id", async () => {

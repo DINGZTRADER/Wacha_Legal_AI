@@ -12,6 +12,18 @@ const DATE_OPTIONAL_ISSUE: IssueModule = {
   title: "Date and optional detail test",
   questions: [
     {
+      id: "urgent-triage",
+      prompt: "Urgent safety/deadline check: threatened, locked out, arrested, harmed, or given a deadline?",
+      kind: "single-choice",
+      required: true,
+      answerProvenance: "USER_STATEMENT",
+      options: [
+        { value: "urgent", label: "Yes — notice, lockout, threat, or removal" },
+        { value: "not-urgent", label: "No — no urgent safety or deadline issue" },
+        { value: "not-sure", label: "Not sure" },
+      ],
+    },
+    {
       id: "event-date",
       prompt: "When did the event happen?",
       kind: "date",
@@ -50,6 +62,8 @@ async function completeDismissalIntake() {
     />,
   );
 
+  await user.click(screen.getByRole("radio", { name: /no.*urgent safety or deadline issue/i }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
   await user.click(screen.getByRole("radio", { name: "Employee or former employee" }));
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await user.type(screen.getByRole("textbox", { name: "Your answer" }), "I was dismissed.");
@@ -80,10 +94,17 @@ test("renders one labelled question, advances, and preserves an answer when goin
 
   expect(screen.getByRole("heading", { name: "Dismissal or forced resignation" })).toBeVisible();
   expect(screen.getAllByText(NARRATIVE)).toHaveLength(1);
-  expect(screen.getAllByRole("group")).toHaveLength(1);
+  expect(screen.getByRole("group", { name: /urgent safety.*deadline check/i })).toBeVisible();
+  expect(screen.getByText("Step 1 of 8")).toBeVisible();
+  expect(screen.getByText(/13% complete/)).toBeVisible();
+  expect(screen.getByText(/about 3 minutes remaining/i)).toBeVisible();
+
+  await user.click(screen.getByRole("radio", { name: /no.*urgent safety or deadline issue/i }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+
   expect(screen.getByRole("group", { name: "What is your role in this work matter?" })).toBeVisible();
-  expect(screen.getByText("Question 1 of 7")).toBeVisible();
-  expect(screen.getByText("0% complete")).toBeVisible();
+  expect(screen.getByText("Step 2 of 8")).toBeVisible();
+  expect(screen.getByText(/25% complete/)).toBeVisible();
 
   const employee = screen.getByRole("radio", { name: "Employee or former employee" });
   expect(employee).toHaveAccessibleName("Employee or former employee");
@@ -92,12 +113,11 @@ test("renders one labelled question, advances, and preserves an answer when goin
   await user.click(employee);
   await user.click(screen.getByRole("button", { name: "Continue" }));
 
-  expect(screen.getAllByRole("group")).toHaveLength(1);
   expect(
     screen.getByRole("group", { name: "What happened with the dismissal or resignation?" }),
   ).toBeVisible();
-  expect(screen.getByText("Question 2 of 7")).toBeVisible();
-  expect(screen.getByText("14% complete")).toBeVisible();
+  expect(screen.getByText("Step 3 of 8")).toBeVisible();
+  expect(screen.getByText(/38% complete/)).toBeVisible();
 
   await user.click(screen.getByRole("button", { name: "Back" }));
 
@@ -117,7 +137,9 @@ test("shows answer provenance on review and supports correction before a session
   expect(roleAnswer).not.toBeNull();
   await user.click(within(roleAnswer!).getByRole("button", { name: "Change" }));
 
-  expect(screen.getAllByRole("group")).toHaveLength(1);
+  expect(
+    screen.getByRole("group", { name: "What is your role in this work matter?" }),
+  ).toBeVisible();
   expect(screen.getByRole("button", { name: "Save change" })).toBeVisible();
   await user.click(screen.getByRole("radio", { name: "Employer or manager" }));
   await user.click(screen.getByRole("button", { name: "Save change" }));
@@ -140,6 +162,8 @@ test("visibly labels user allegations on review", async () => {
     />,
   );
 
+  await user.click(screen.getByRole("radio", { name: /no.*urgent safety or deadline issue/i }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
   await user.click(screen.getByRole("radio", { name: "Employee or former employee" }));
   await user.click(screen.getByRole("button", { name: "Continue" }));
 
@@ -195,6 +219,8 @@ test("renders a native date input and shows Not answered for a missing optional 
     />,
   );
 
+  await user.click(screen.getByRole("radio", { name: /no.*urgent safety or deadline issue/i }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
   const dateInput = screen.getByLabelText("Date");
   expect(dateInput).toHaveAttribute("type", "date");
   expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
@@ -221,4 +247,52 @@ test("renders recovery guidance for an invalid issue instead of throwing", () =>
     "Please return to the issue list and choose your matter again.",
   );
   expect(screen.queryByRole("group")).not.toBeInTheDocument();
+});
+
+test("shows a privacy promise and an urgent triage before the standard questions", async () => {
+  const user = userEvent.setup();
+  render(
+    <GuidedIntake
+      departmentId="land-tenancy"
+      issueId="rent-tenancy-eviction"
+      originalNarrative="My landlord gave me a notice to leave."
+    />,
+  );
+
+  expect(screen.getByText(/do not share passwords.*bank details/i)).toBeVisible();
+  expect(screen.getByRole("link", { name: /privacy guidance/i })).toHaveAttribute(
+    "href",
+    "#privacy-guidance",
+  );
+  expect(screen.getByRole("group", { name: /urgent safety.*deadline check/i })).toBeVisible();
+  expect(screen.getByRole("radio", { name: /yes.*notice.*lockout/i })).toBeVisible();
+
+  await user.click(screen.getByRole("radio", { name: /yes.*notice.*lockout/i }));
+  await user.click(screen.getByRole("button", { name: /continue/i }));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(/urgent help/i);
+  expect(screen.getByRole("alert")).toHaveTextContent(/enrolled advocate/i);
+  expect(screen.queryByRole("group", { name: /what is your position/i })).not.toBeInTheDocument();
+});
+
+test("uses mutually exclusive land role labels and offers an exit before answering", () => {
+  render(
+    <GuidedIntake
+      departmentId="land-tenancy"
+      issueId="land-sale-transfer-title"
+      originalNarrative="I need help with a land transfer."
+    />,
+  );
+
+  const user = userEvent.setup();
+  expect(screen.getByRole("link", { name: /exit intake/i })).toHaveAttribute(
+    "href",
+    "/departments/land-tenancy",
+  );
+  return user
+    .click(screen.getByRole("radio", { name: /no.*urgent safety or deadline issue/i }))
+    .then(() => user.click(screen.getByRole("button", { name: /continue/i })))
+    .then(() => {
+      expect(screen.getByRole("radio", { name: "Tenant or occupant" })).toBeVisible();
+    });
 });

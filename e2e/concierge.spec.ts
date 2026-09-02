@@ -31,7 +31,7 @@ test("routes a Land & Tenancy concierge story into guided intake without putting
   expect(decodeURIComponent(page.url())).not.toContain(story);
   await expect(page.getByRole("heading", { name: /rent, tenancy, or eviction/i })).toBeVisible();
   await expect(page.getByText(story)).toBeVisible();
-  await expect(page.getByText("Question 1 of 7")).toBeVisible();
+  await expect(page.getByText("Step 1 of 8")).toBeVisible();
 });
 
 test("shows emergency escalation", async ({ page }) => {
@@ -56,13 +56,13 @@ test("opens the Employment department chooser and starts a guided intake from a 
   await page.getByRole("link", { name: /dismissal or forced resignation/i }).click();
   await expect(page).toHaveURL(/department=employment&issue=dismissal/);
   await expect(page.getByRole("heading", { name: /dismissal or forced resignation/i })).toBeVisible();
-  await expect(page.getByText("Question 1 of 7")).toBeVisible();
+  await expect(page.getByText("Step 1 of 8")).toBeVisible();
 });
 
 test("shows the shared issue counts on all seven department pages", async ({ page }) => {
   for (const department of DEPARTMENT_COUNTS) {
     await page.goto(`/departments/${department.id}`);
-    await expect(page.getByRole("heading", { name: new RegExp(department.title, "i") })).toBeVisible();
+    await expect(page.getByRole("heading", { name: department.title, exact: true })).toBeVisible();
     await expect(page.locator(".issue-card")).toHaveCount(department.count);
     await expect(page.getByText("Existing document tools", { exact: true })).toBeVisible();
   }
